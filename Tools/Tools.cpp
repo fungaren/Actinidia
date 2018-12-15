@@ -201,8 +201,8 @@ void onImageConcatenate()
 	ofn.nMaxFile = MAX_PATH;
 	setOFN(ofn, L"PNG File (*.png)\0*.png\0JPEG File (*.jpg)\0*.jpg\0\0", L"png\0jpg");
 	ofn.Flags &= ~OFN_ALLOWMULTISELECT;
-	//if (GetSaveFileName(&ofn) <= 0)
-	//	return;
+	if (GetSaveFileName(&ofn) <= 0)
+		return;
 
 	deployImageContatenate(tempPath, file_list);
 }

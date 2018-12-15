@@ -175,8 +175,8 @@ bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstr
 			if (width == 0)
 				width = imgs.back().getWidth();
 			else if (imgs.back().getWidth() != width)
-				throw std::runtime_error("Images width are not consistent.\n"\
-					"Only images with the same width that can be concatenated.");
+				throw std::runtime_error("Images width don't match.\n"\
+					"Only images with the same width can be concatenated.");
 			total_height += imgs.back().getHeight();
 			if (total_height > std::numeric_limits<uint16_t>::max())
 				throw std::runtime_error("Image height is too large. \n"\

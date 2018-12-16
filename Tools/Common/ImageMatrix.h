@@ -6,8 +6,6 @@ extern "C" {
 #include "../libjpeg/jpeglib.h"
 }
 
-using namespace std::filesystem;
-
 class Matrix {
 protected:
 	Matrix() = default;

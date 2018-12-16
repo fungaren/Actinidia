@@ -1,4 +1,14 @@
 #include "pch.h"
+// Add these codes to pch.h
+/*
+#include <Windows.h>
+#undef max
+#include <iostream>
+#include <string>
+#include <thread>
+#include <filesystem>
+*/
+
 #include "ImageMatrix.h"
 #pragma comment(lib, "libpng/libpng16.lib")
 #pragma comment(lib, "zlib/zlibstatic.lib")

@@ -20,10 +20,11 @@ inline void enableButtons()
 	EnableWindow(GetDlgItem(hWnd, IDC_IMGGLUING), TRUE);
 }
 
-using namespace std::filesystem;
 std::thread task;
 bool userClosed = false;	// if user closed the window, do not update window controls when tasks finished
-bool generatePack(const std::wstring& destFile, const path& resDirectory);
+
+#include "Common/ResourcePack.h"
+using namespace std::filesystem;
 void deployPack(const std::wstring& destFile, const path& resDirectory)
 {
 	SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0, (LPARAM)L"Generating...");
@@ -40,7 +41,6 @@ void deployPack(const std::wstring& destFile, const path& resDirectory)
 	});
 }
 
-bool extractPack(const path& resFile);
 void deployUnpack(const path& resFile)
 {
 	SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0, (LPARAM)L"Extracting...");
@@ -57,7 +57,53 @@ void deployUnpack(const path& resFile)
 	});
 }
 
-bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstring>& imgFiles);
+#include "Common/Canvas.h"
+bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstring>& imgFiles)
+{
+	std::vector<ImageMatrix> imgs;
+	uint32_t width = 0, total_height = 0;
+	try {
+		for (auto& file : imgFiles) {
+			std::wstring extName = file.substr(file.rfind(L'.') + 1);
+			if (extName == L"png" || extName == L"PNG")
+				imgs.emplace_back(ImageMatrixFactory::fromPngFile(file.c_str()));
+			else
+				imgs.emplace_back(ImageMatrixFactory::fromJpegFile(file.c_str()));
+			if (width == 0)
+				width = imgs.back().getWidth();
+			else if (imgs.back().getWidth() != width)
+				throw std::runtime_error("Images width don't match.\n"\
+					"Only images with the same width can be concatenated.");
+			total_height += imgs.back().getHeight();
+			if (total_height > std::numeric_limits<uint16_t>::max())
+				throw std::runtime_error("Image height is too large. \n"\
+					"Reduce the number of images and try again.");
+		}
+	}
+	catch (std::runtime_error e) {
+		MessageBoxA(NULL, e.what(), "Error", MB_OK | MB_ICONERROR);
+		return false;
+	}
+	ImageMatrix temp = ImageMatrixFactory::createBufferImage(width, total_height, Canvas::Constant::alpha);
+	uint16_t y = 0;
+	for (const ImageMatrix& i : imgs) {
+		PiCanvas::blend(temp, i, 0, y, 0xFF);
+		y += i.getHeight();
+	}
+	try {
+		std::wstring extName = destImage.substr(destImage.rfind(L'.') + 1);
+		if (extName == L"png" || extName == L"PNG")
+			ImageMatrixFactory::dumpPngFile(temp, destImage.c_str());
+		else
+			ImageMatrixFactory::dumpJpegFile(temp, destImage.c_str(), 100);
+	}
+	catch (std::runtime_error e) {
+		MessageBoxA(NULL, e.what(), "Error", MB_OK | MB_ICONERROR);
+		return false;
+	}
+	return true;
+}
+
 void deployImageContatenate(const std::wstring& destImage, const std::vector<std::wstring>& imgFiles)
 {
 	SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0, (LPARAM)L"Concatenating...");
@@ -207,7 +253,6 @@ void onImageConcatenate()
 	deployImageContatenate(tempPath, file_list);
 }
 
-#include "Common/Window.h"
 void dragFiles(HDROP hDrop)
 {
 	TCHAR tempPath[MAX_PATH] = { '\0' };

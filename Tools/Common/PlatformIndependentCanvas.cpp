@@ -234,6 +234,8 @@ void PlatformIndependenceCanvas::blend(ImageMatrix& imDest, const ImageMatrix& i
 {
 	if (imDest.getMatrix() == nullptr || imSrc.getMatrix() == nullptr)
 		throw std::invalid_argument("ImageMatrix is not initialized");
+	if (imDest.getMatrix() == imSrc.getMatrix())
+		throw std::invalid_argument("Source and destination cannot be the same");
 
 	if (ySrc + srcHeight > imSrc.getHeight() || xSrc + srcWidth > imSrc.getWidth())
 		return;

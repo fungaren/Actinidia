@@ -66,15 +66,15 @@
     <ClInclude Include="Common\Window.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="Common\ResourcePack.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Tools.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Impl.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Common\GdiCanvas.cpp">
@@ -87,6 +87,9 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="Common\Window.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\ResourcePack.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>

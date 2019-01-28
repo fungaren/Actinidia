@@ -1,0 +1,20 @@
+namespace GameHost
+{
+	runtimeclass ActinidiaGame : Windows.UI.Xaml.Data.INotifyPropertyChanged
+	{
+		ActinidiaGame(
+			Windows.UI.Xaml.Media.ImageSource icon,
+			Windows.UI.Xaml.Media.ImageSource photo,
+			String title,
+			String subtitle,
+			String description,
+			Single rating
+		);
+		Windows.UI.Xaml.Media.ImageSource Icon{ get; };
+		Windows.UI.Xaml.Media.ImageSource Photo{ get; };
+		String Title{ get; };
+		String Subtitle{ get; };
+		String Description{ get; };
+		Single Rating{ get; };
+	}
+}

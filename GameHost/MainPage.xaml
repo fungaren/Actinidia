@@ -1,0 +1,74 @@
+﻿<Page
+    x:Class="GameHost.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:GameHost"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <DataTemplate x:Key="ListViewItemTemplate1"
+                      x:DataType="local:ActinidiaGame">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="auto"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Image Source="{x:Bind Icon}" MaxWidth="44" MaxHeight="44" Stretch="Uniform" 
+                       Grid.Column="0" Margin="0,0,12,0"/>
+                <StackPanel Orientation="Vertical" Grid.Column="1">
+                    <TextBlock Text="{x:Bind Title}" Style="{StaticResource CaptionTextBlockStyle}"/>
+                    <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource CaptionTextBlockStyle}"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <CommandBar DefaultLabelPosition="Right"
+                    Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+            <AppBarButton Icon="Play" x:Name="buttonRunLocal" Label="Run Local" Margin="0,0,0,0"
+                        HorizontalAlignment="Left" Click="ButtonRunLocal_Click"/>
+            <AppBarSeparator/>
+            <AppBarButton Icon="Print" x:Name="buttonPublish" Label="Publish" Margin="0,0,0,0"
+                        HorizontalAlignment="Left" Click="ButtonRunLocal_Click"/>
+            <AppBarButton Icon="Globe" x:Name="buttonVisit" Label="Visit Site" Margin="0,0,0,0"
+                        HorizontalAlignment="Left" Click="ButtonRunLocal_Click"/>
+            <!--<CommandBar.SecondaryCommands>
+                <AppBarButton Label="Like" Click="AppBarButton_Click"/>
+                <AppBarButton Label="Dislike" Click="AppBarButton_Click"/>
+            </CommandBar.SecondaryCommands>-->
+            <CommandBar.Content>
+                <TextBlock Text="Available Games" Margin="12,8" Style="{StaticResource TitleTextBlockStyle}"/>
+            </CommandBar.Content>
+        </CommandBar>
+        <ListView ItemsSource="{x:Bind Games}" ItemTemplate="{StaticResource ListViewItemTemplate1}" 
+                  x:Name="GamelistView" Grid.Row="1" Grid.Column="0" BorderBrush="#ffeeeeee" BorderThickness="0,0,1,0">
+            <ListViewItem Content="ListViewItem1"/>
+            <ListViewItem Content="ListViewItem2"/>
+            <ListViewItem Content="ListViewItem3"/>
+        </ListView>
+        <StackPanel Grid.Row="1" Grid.Column="1">
+            <Image Source="Assets/StoreLogo.png" x:Name="GamePhoto" Height="200" Stretch="UniformToFill"/>
+            <TextBlock Text="Title" x:Name="GameTitle" Style="{StaticResource TitleTextBlockStyle}"
+                       Margin="12,12,0,0"/>
+            <TextBlock Text="Subtitle" x:Name="GameSubtitle" Style="{StaticResource SubtitleTextBlockStyle}"
+                       Margin="12,12,0,0"/>
+            <RatingControl Value="3.5" x:Name="GameRating" IsReadOnly="True" Caption="Rating" 
+                           HorizontalAlignment="Left" Margin="12,12,0,0"/>
+            <TextBlock Text="Description" x:Name="GameDescription" MinHeight="100" 
+                       Style="{StaticResource CaptionTextBlockStyle}" Margin="12,12,12,24"/>
+            <Button x:Name="buttonPlay" Content="Play Now" Margin="0,0,24,0" HorizontalAlignment="Right"
+                    Click="ButtonPlay_Click" Style="{StaticResource AccentButtonStyle}"/>
+        </StackPanel>
+    </Grid>
+</Page>

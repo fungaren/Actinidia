@@ -1,0 +1,8 @@
+namespace GameHost
+{
+	[default_interface]
+	runtimeclass DirectXPage : Windows.UI.Xaml.Controls.Page
+	{
+		DirectXPage();
+	}
+}

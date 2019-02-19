@@ -25,7 +25,7 @@ Pack resource folder to a single `.res` file. The resource file can be load by A
 ## MapEditor
 
 Build tile maps. Originally it is provided in prior version, but now it is now **removed** because of it's
-awful implementation. Here's an [Screenshot](https://moooc.oss-cn-shenzhen.aliyuncs.com/blog/Actinidia_mapeditor_prev.png).
+awful implementation. Here's a [Screenshot](https://moooc.oss-cn-shenzhen.aliyuncs.com/blog/Actinidia_mapeditor_prev.png).
 
 ## Used libraries
 

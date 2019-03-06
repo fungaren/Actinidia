@@ -8,16 +8,33 @@ class Window
 	uint16_t width;
 	uint16_t height;
 
-	void looper() const;
+	void looper();
 
+#ifdef _WIN32
+	HWND hWnd;
+#endif /* _WIN32 */
+
+#ifdef _GTK
+	;
+#endif /* _GTK */
+
+	// int key: The virtual-key code of the key when the ALT key is not pressed.
 	std::function<void(int)> onKeyDown = [](int) {};
 	std::function<void(int)> onKeyUp = [](int) {};
+	// uint32 vkeys: Indicates whether various virtual keys are down.
+	// int x: Specifies the x-coordinate of the cursor. The coordinate is relative to the upper-left corner of the client area.
+	// int y: Specifies the y-coordinate of the cursor. The coordinate is relative to the upper-left corner of the client area.
 	std::function<void(uint32_t, int, int)> onLButtonDown = [](uint32_t, int, int) {};
 	std::function<void(uint32_t, int, int)> onLButtonUp = [](uint32_t, int, int) {};
 	std::function<void(uint32_t, int, int)> onRButtonDown = [](uint32_t, int, int) {};
 	std::function<void(uint32_t, int, int)> onRButtonUp = [](uint32_t, int, int) {};
 	std::function<void(uint32_t, int, int)> onMouseMove = [](uint32_t, int, int) {};
-	std::function<void(short, int, int)> onMouseWheel = [](short, int, int) {};
+	// uint32 vkeys: Indicates whether various virtual keys are down.
+	// short zDelta: indicates the distance the wheel is rotated. A positive value indicates that the wheel was rotated forward,
+	//               away from the user; a negative value indicates that the wheel was rotated backward, toward the user.
+	// int x: Specifies the x - coordinate of the pointer, relative to the upper - left corner of the screen.
+	// int y: Specifies the y - coordinate of the pointer, relative to the upper - left corner of the screen.
+	std::function<void(uint32_t, short, int, int)> onMouseWheel = [](uint32_t, short, int, int) {};
 	std::function<void(const GdiCanvas&)> onPaint = [](const GdiCanvas&) {};
 
 	void isRunning() {
@@ -44,25 +61,26 @@ public:
 		this->height = height;
 		tWnd = std::thread(&Window::looper, this);
 	}
+	void refresh() const;
 
 	template <typename T>
-	void setKeyDownHandler(T& handler)		{ isRunning(); onKeyDown = handler; }
+	void setKeyDownHandler(T&& handler)		{ isRunning(); onKeyDown = handler; }
 	template <typename T>
-	void setKeyUpHandler(T& handler)		{ isRunning(); onKeyUp = handler; }
+	void setKeyUpHandler(T&& handler)		{ isRunning(); onKeyUp = handler; }
 	template <typename T>
-	void setLButtonDownHandler(T& handler)	{ isRunning(); onLButtonDown = handler; }
+	void setLButtonDownHandler(T&& handler)	{ isRunning(); onLButtonDown = handler; }
 	template <typename T>
-	void setLButtonUpHandler(T& handler)	{ isRunning(); onLButtonUp = handler; }
+	void setLButtonUpHandler(T&& handler)	{ isRunning(); onLButtonUp = handler; }
 	template <typename T>
-	void setRButtonDownHandler(T& handler)	{ isRunning(); onRButtonDown = handler; }
+	void setRButtonDownHandler(T&& handler)	{ isRunning(); onRButtonDown = handler; }
 	template <typename T>
-	void setRButtonUpHandler(T& handler)	{ isRunning(); onRButtonUp = handler; }
+	void setRButtonUpHandler(T&& handler)	{ isRunning(); onRButtonUp = handler; }
 	template <typename T>
-	void setMouseMoveHandler(T& handler)	{ isRunning(); onMouseMove = handler; }
+	void setMouseMoveHandler(T&& handler)	{ isRunning(); onMouseMove = handler; }
 	template <typename T>
-	void setMouseWheelHandler(T& handler)	{ isRunning(); onMouseWheel = handler; }
+	void setMouseWheelHandler(T&& handler)	{ isRunning(); onMouseWheel = handler; }
 	template <typename T>
-	void setPaintHandler(T& handler)		{ isRunning(); onPaint = handler; }
+	void setPaintHandler(T&& handler)		{ isRunning(); onPaint = handler; }
 
 	auto& getKeyDownHandler() const			{ return onKeyDown; }
 	auto& getKeyUpHandler() const			{ return onKeyUp; }

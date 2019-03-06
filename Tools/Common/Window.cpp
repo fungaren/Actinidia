@@ -11,42 +11,39 @@ LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 	switch (message)
 	{
 	case WM_KEYDOWN:
-		callbackSource[hWnd]->getKeyDownHandler()(wParam);
+		callbackSource[hWnd]->getKeyDownHandler()((uint32_t)wParam);
 		break;
 	case WM_KEYUP:
-		callbackSource[hWnd]->getKeyUpHandler()(wParam);
+		callbackSource[hWnd]->getKeyUpHandler()((uint32_t)wParam);
 		break;
 	case WM_LBUTTONDOWN:
-		callbackSource[hWnd]->getLButtonDownHandler()(wParam, LOWORD(lParam), HIWORD(lParam));
+		callbackSource[hWnd]->getLButtonDownHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
 		break;
 	case WM_LBUTTONUP:
-		callbackSource[hWnd]->getLButtonUpHandler()(wParam, LOWORD(lParam), HIWORD(lParam));
+		callbackSource[hWnd]->getLButtonUpHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
 		break;
 	case WM_RBUTTONDOWN:
-		callbackSource[hWnd]->getRButtonDownHandler()(wParam, LOWORD(lParam), HIWORD(lParam));
+		callbackSource[hWnd]->getRButtonDownHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
 		break;
 	case WM_RBUTTONUP:
-		callbackSource[hWnd]->getRButtonUpHandler()(wParam, LOWORD(lParam), HIWORD(lParam));
+		callbackSource[hWnd]->getRButtonUpHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
 		break;
 	case WM_MOUSEMOVE:
-		callbackSource[hWnd]->getMouseMoveHandler()(wParam, LOWORD(lParam), HIWORD(lParam));
+		callbackSource[hWnd]->getMouseMoveHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
 		break;
 	case WM_MOUSEWHEEL:
-	{
-		RECT rc;
-		GetClientRect(hWnd, &rc);
 		callbackSource[hWnd]->getMouseWheelHandler()(
-			GET_WHEEL_DELTA_WPARAM(wParam),
-			(int)LOWORD(lParam) - rc.left,
-			(int)HIWORD(lParam) - rc.top
+			GET_KEYSTATE_WPARAM(wParam),
+			GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA,
+			(short)LOWORD(lParam),
+			(short)HIWORD(lParam)
 		);
-	}
-	break;
+		break;
 	case WM_PAINT:
 	{
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
-		GdiCanvas gdi = GdiCanvas(hWnd, hdc);
+		GdiCanvas gdi(hWnd, hdc);
 		callbackSource[hWnd]->getPaintHandler()(gdi);
 		EndPaint(hWnd, &ps);
 	}
@@ -60,7 +57,7 @@ LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 	return 0;
 }
 
-void Window::looper() const
+void Window::looper()
 {
 	HINSTANCE hInstance = GetModuleHandle(NULL);
 	WNDCLASSEXW wcex;
@@ -77,7 +74,7 @@ void Window::looper() const
 	wcex.lpszClassName = title.c_str();
 	wcex.hIconSm = NULL;
 	RegisterClassExW(&wcex);
-	HWND hWnd = CreateWindowW(title.c_str(), title.c_str(), WS_OVERLAPPEDWINDOW,
+	this->hWnd = CreateWindowW(title.c_str(), title.c_str(), WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, 0, width, height, nullptr, nullptr, hInstance, nullptr);
 	if (!hWnd)
 		return;
@@ -90,6 +87,13 @@ void Window::looper() const
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+}
+
+void Window::refresh() const
+{
+	RECT rc;
+	GetClientRect(hWnd, &rc);
+	InvalidateRect(hWnd, &rc, FALSE);
 }
 
 #if 0
@@ -117,12 +121,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	Window w;
 	w.create(L"demo");
 }
-
 #endif /* 0 */
+
 #endif /* _WIN32 */
+
 #ifdef _GTK
 
 void Window::looper() const
+{
+
+}
+
+void Window::refresh() const
 {
 
 }

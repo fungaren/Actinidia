@@ -11,9 +11,10 @@ void GdiCanvas::fillSolidRect(int left, int top, int right, int bottom, color fi
 }
 
 bool GdiCanvas::printText(int x, int y, std::wstring str, uint16_t len,
-	std::wstring fontName, uint8_t fontSize, color fontColor) const
+	std::wstring fontName, uint8_t fontSize, color fontColor, CharStyle style) const
 {
-	HFONT fn = CreateFont(fontSize, 0, 0, 0, 100, FALSE, FALSE, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS,
+	uint32_t font_weight = style & Constant::style_bold ? 700 : 400;
+	HFONT fn = CreateFont(fontSize, 0, 0, 0, font_weight, FALSE, FALSE, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS,
 		CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_SWISS, fontName.c_str());
 	HFONT oldfn = (HFONT)SelectObject(hdc, fn);
 	SetTextColor(hdc, toABGR(fontColor) & 0x00FFFFFF);

@@ -48,6 +48,11 @@ LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 		EndPaint(hWnd, &ps);
 	}
 	break;
+    case WM_CLOSE:
+        if (callbackSource[hWnd]->getExitCallback()())
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        else
+            break;
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;

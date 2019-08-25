@@ -35,7 +35,10 @@ class Window
 	// int x: Specifies the x - coordinate of the pointer, relative to the upper - left corner of the screen.
 	// int y: Specifies the y - coordinate of the pointer, relative to the upper - left corner of the screen.
 	std::function<void(uint32_t, short, int, int)> onMouseWheel = [](uint32_t, short, int, int) {};
+    // GdiCanvas c: the Canvas you can draw stuff on
 	std::function<void(const GdiCanvas&)> onPaint = [](const GdiCanvas&) {};
+    // ret bool: indicate do exit or not
+    std::function<bool()> onExit = [] { return true; };
 
 	void isRunning() {
 		if (tWnd.joinable())
@@ -81,6 +84,8 @@ public:
 	void setMouseWheelHandler(T&& handler)	{ isRunning(); onMouseWheel = handler; }
 	template <typename T>
 	void setPaintHandler(T&& handler)		{ isRunning(); onPaint = handler; }
+    template <typename T>
+    void setExitCallback(T&& handler)       { isRunning(); onExit = handler; }
 
 	auto& getKeyDownHandler() const			{ return onKeyDown; }
 	auto& getKeyUpHandler() const			{ return onKeyUp; }
@@ -91,5 +96,6 @@ public:
 	auto& getMouseMoveHandler() const		{ return onMouseMove; }
 	auto& getMouseWheelHandler() const		{ return onMouseWheel; }
 	auto& getPaintHandler() const			{ return onPaint; }
+    auto& getExitCallback() const           { return onExit; }
 
 };

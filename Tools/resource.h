@@ -8,6 +8,15 @@
 #define IDB_LOGO                        104
 #define IDC_PACK                        1001
 #define IDC_UNPACK                      1002
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
 #define IDC_IMGGLUING                   1003
 #define IDC_PROGRESS                    1006
 #define IDC_STATUS                      1007

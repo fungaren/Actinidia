@@ -39,6 +39,8 @@ class Window
 	std::function<void(const GdiCanvas&)> onPaint = [](const GdiCanvas&) {};
     // ret bool: indicate do exit or not
     std::function<bool()> onExit = [] { return true; };
+    // ret bool: indicate any else message handled or none
+    std::function<bool(uint32_t, uint32_t, uint32_t)> onElse = [](uint32_t, uint32_t, uint32_t) { return false; };
 
 	void isRunning() {
 		if (tWnd.joinable())
@@ -65,6 +67,10 @@ public:
 		tWnd = std::thread(&Window::looper, this);
 	}
 	void refresh() const;
+    // a pair (left, top)
+    std::pair<int, int> getPos() const;
+    // a pair (width, height)
+    std::pair<int, int> getSize() const;
 
 	template <typename T>
 	void setKeyDownHandler(T&& handler)		{ isRunning(); onKeyDown = handler; }
@@ -86,6 +92,8 @@ public:
 	void setPaintHandler(T&& handler)		{ isRunning(); onPaint = handler; }
     template <typename T>
     void setExitCallback(T&& handler)       { isRunning(); onExit = handler; }
+    template <typename T>
+    void setElseHandler(T&& handler)        { isRunning(); onElse = handler; }
 
 	auto& getKeyDownHandler() const			{ return onKeyDown; }
 	auto& getKeyUpHandler() const			{ return onKeyUp; }
@@ -97,5 +105,6 @@ public:
 	auto& getMouseWheelHandler() const		{ return onMouseWheel; }
 	auto& getPaintHandler() const			{ return onPaint; }
     auto& getExitCallback() const           { return onExit; }
+    auto& getElseHandler() const            { return onElse; }
 
 };

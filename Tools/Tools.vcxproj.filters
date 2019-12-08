@@ -25,6 +25,9 @@
     <Filter Include="Common">
       <UniqueIdentifier>{186a8d99-6d68-44c9-a7f1-b308f9ef6720}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Snake">
+      <UniqueIdentifier>{646a292b-1e91-43a5-80e1-4bf779e5582f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -69,6 +72,9 @@
     <ClInclude Include="Common\ResourcePack.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="Snake\Snake.h">
+      <Filter>Snake</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -92,6 +98,9 @@
     <ClCompile Include="Common\ResourcePack.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="Snake\Snake.cpp">
+      <Filter>Snake</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Tools.rc">
@@ -106,6 +115,15 @@
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="actinidia.png">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="Snake\food.png">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="Snake\HelloSnake.png">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="Snake\snake.ico">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>

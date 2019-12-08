@@ -57,7 +57,8 @@ LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 		PostQuitMessage(0);
 		break;
 	default:
-		return DefWindowProc(hWnd, message, wParam, lParam);
+        if (!callbackSource[hWnd]->getElseHandler()(message, wParam, lParam))
+		    return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
 }
@@ -99,6 +100,20 @@ void Window::refresh() const
 	RECT rc;
 	GetClientRect(hWnd, &rc);
 	InvalidateRect(hWnd, &rc, FALSE);
+}
+
+std::pair<int, int> Window::getPos() const
+{
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+    return { rc.left, rc.top };
+}
+
+std::pair<int, int> Window::getSize() const
+{
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+    return { rc.right - rc.left, rc.bottom - rc.top };
 }
 
 #if 0

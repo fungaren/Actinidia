@@ -8,98 +8,112 @@ std::map<HWND, const Window*> callbackSource;
 
 LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	switch (message)
-	{
-	case WM_KEYDOWN:
-		callbackSource[hWnd]->getKeyDownHandler()((uint32_t)wParam);
-		break;
-	case WM_KEYUP:
-		callbackSource[hWnd]->getKeyUpHandler()((uint32_t)wParam);
-		break;
-	case WM_LBUTTONDOWN:
-		callbackSource[hWnd]->getLButtonDownHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
-		break;
-	case WM_LBUTTONUP:
-		callbackSource[hWnd]->getLButtonUpHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
-		break;
-	case WM_RBUTTONDOWN:
-		callbackSource[hWnd]->getRButtonDownHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
-		break;
-	case WM_RBUTTONUP:
-		callbackSource[hWnd]->getRButtonUpHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
-		break;
-	case WM_MOUSEMOVE:
-		callbackSource[hWnd]->getMouseMoveHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
-		break;
-	case WM_MOUSEWHEEL:
-		callbackSource[hWnd]->getMouseWheelHandler()(
-			GET_KEYSTATE_WPARAM(wParam),
-			GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA,
-			(short)LOWORD(lParam),
-			(short)HIWORD(lParam)
-		);
-		break;
-	case WM_PAINT:
-	{
-		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hWnd, &ps);
-		GdiCanvas gdi(hWnd, hdc);
-		callbackSource[hWnd]->getPaintHandler()(gdi);
-		EndPaint(hWnd, &ps);
-	}
-	break;
+    switch (message)
+    {
+    case WM_KEYDOWN:
+        callbackSource[hWnd]->getKeyDownHandler()((uint32_t)wParam);
+        break;
+    case WM_KEYUP:
+        callbackSource[hWnd]->getKeyUpHandler()((uint32_t)wParam);
+        break;
+    case WM_LBUTTONDOWN:
+        callbackSource[hWnd]->getLButtonDownHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        break;
+    case WM_LBUTTONUP:
+        callbackSource[hWnd]->getLButtonUpHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        break;
+    case WM_RBUTTONDOWN:
+        callbackSource[hWnd]->getRButtonDownHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        break;
+    case WM_RBUTTONUP:
+        callbackSource[hWnd]->getRButtonUpHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        break;
+    case WM_MOUSEMOVE:
+        callbackSource[hWnd]->getMouseMoveHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        break;
+    case WM_MOUSEWHEEL:
+        callbackSource[hWnd]->getMouseWheelHandler()(
+            GET_KEYSTATE_WPARAM(wParam),
+            GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA,
+            (short)LOWORD(lParam),
+            (short)HIWORD(lParam)
+        );
+        break;
+    case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
+        GdiCanvas gdi(hWnd, hdc);
+        callbackSource[hWnd]->getPaintHandler()(gdi);
+        EndPaint(hWnd, &ps);
+    }
+    break;
     case WM_CLOSE:
         if (callbackSource[hWnd]->getExitCallback()())
             return DefWindowProc(hWnd, message, wParam, lParam);
         else
             break;
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	default:
-        if (!callbackSource[hWnd]->getElseHandler()(message, wParam, lParam))
-		    return DefWindowProc(hWnd, message, wParam, lParam);
-	}
-	return 0;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    default:
+    {auto x = callbackSource[hWnd];
+    if (!x->getElseHandler()(message, wParam, lParam))
+        return DefWindowProc(hWnd, message, wParam, lParam); }
+    }
+    return 0;
 }
 
-void Window::looper()
+void Window::looper(bool registClass)
 {
-	HINSTANCE hInstance = GetModuleHandle(NULL);
-	WNDCLASSEXW wcex;
-	wcex.cbSize = sizeof(WNDCLASSEX);
-	wcex.style = CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc = dispacher;
-	wcex.cbClsExtra = 0;
-	wcex.cbWndExtra = 0;
-	wcex.hInstance = hInstance;
-	wcex.hIcon = NULL;
-	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
-	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	wcex.lpszMenuName = NULL;
-	wcex.lpszClassName = title.c_str();
-	wcex.hIconSm = NULL;
-	RegisterClassExW(&wcex);
-	this->hWnd = CreateWindowW(title.c_str(), title.c_str(), WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, width, height, nullptr, nullptr, hInstance, nullptr);
-	if (!hWnd)
-		return;
-	callbackSource[hWnd] = this;
-	ShowWindow(hWnd, SW_SHOW);
-	UpdateWindow(hWnd);
+    HINSTANCE hInstance = GetModuleHandle(NULL);
+    if (registClass)
+    {
+        WNDCLASSEXW wcex;
+        wcex.cbSize = sizeof(WNDCLASSEX);
+        wcex.style = CS_HREDRAW | CS_VREDRAW;
+        wcex.lpfnWndProc = dispacher;
+        wcex.cbClsExtra = 0;
+        wcex.cbWndExtra = 0;
+        wcex.hInstance = hInstance;
+        wcex.hIcon = NULL;
+        wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        wcex.lpszMenuName = NULL;
+        wcex.lpszClassName = title.c_str();
+        wcex.hIconSm = NULL;
+        RegisterClassExW(&wcex);
+    }
+    this->hWnd = CreateWindowW(title.c_str(), title.c_str(), WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, 0, width, height, nullptr, nullptr, hInstance, nullptr);
+    if (!hWnd)
+        return;
+    callbackSource[hWnd] = this;
+    ShowWindow(hWnd, SW_SHOW);
+    UpdateWindow(hWnd);
 
-	MSG msg;
-	while (GetMessage(&msg, nullptr, 0, 0)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
+    MSG msg;
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
 }
 
 void Window::refresh() const
 {
-	RECT rc;
-	GetClientRect(hWnd, &rc);
-	InvalidateRect(hWnd, &rc, FALSE);
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+    InvalidateRect(hWnd, &rc, FALSE);
+}
+
+void Window::alert(const std::wstring& str, uint32_t flag) const
+{
+    MessageBox(hWnd, str.c_str(), NULL, NULL);
+}
+
+void Window::setTitle(const std::wstring& str)
+{
+    SetWindowText(hWnd, str.c_str());
 }
 
 std::pair<int, int> Window::getPos() const
@@ -132,14 +146,14 @@ std::pair<int, int> Window::getSize() const
 #endif
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ LPWSTR    lpCmdLine,
-	_In_ int       nCmdShow)
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPWSTR    lpCmdLine,
+    _In_ int       nCmdShow)
 {
-	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
-	Window w;
-	w.create(L"demo");
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+    Window w;
+    w.create(L"demo");
 }
 #endif /* 0 */
 

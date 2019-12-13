@@ -171,6 +171,7 @@
     <ClInclude Include="Common\Canvas.h" />
     <ClInclude Include="Common\ImageMatrix.h" />
     <ClInclude Include="Common\ResourcePack.h" />
+    <ClInclude Include="Common\Timer.h" />
     <ClInclude Include="Common\Window.h" />
     <ClInclude Include="libjpeg\jconfig.h" />
     <ClInclude Include="libjpeg\jmorecfg.h" />

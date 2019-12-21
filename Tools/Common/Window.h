@@ -10,7 +10,7 @@ class Window
 
 #ifdef _WIN32
     HWND hWnd;
-    void looper(bool registClass=true);
+    void looper(HWND parent);
 #endif /* _WIN32 */
 
 #ifdef _GTK
@@ -39,7 +39,7 @@ class Window
     // ret bool: indicate do exit or not
     std::function<bool()> onExit = [] { return true; };
 #ifdef _WIN32
-    // ret bool: indicate any else message handled or none
+    // ret bool: indicate whether any message handled
     std::function<bool(uint32_t, WPARAM, LPARAM)> onElse = [](uint32_t, WPARAM, LPARAM) { return false; };
 #endif /* _WIN32 */
 
@@ -60,15 +60,18 @@ public:
             tWnd.join();
     }
 #ifdef _WIN32
+    // If parent window is not set (default), Windows Messages will be take over.
+    // Otherwise, you must call dispacher(...) manually in the parent WndProc.
     void create(const std::wstring& title, uint16_t width = 600, uint16_t height = 400,
-        bool registClass = true) {
+        HWND parent=NULL) {
         if (title.empty())
             return;
         this->title = title;
         this->width = width;
         this->height = height;
-        tWnd = std::thread(&Window::looper, this, registClass);
+        tWnd = std::thread(&Window::looper, this, parent);
     }
+    static LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 #endif /* _WIN32 */
 #ifdef _GTK
     void create(const std::wstring& title, uint16_t width = 600, uint16_t height = 400) {
@@ -80,7 +83,7 @@ public:
         tWnd = std::thread(&Window::looper, this);
     }
 #endif /* _GTK */
-    void refresh() const;
+    void refresh();
     void alert(const std::wstring& str, uint32_t flag=0) const;
     void setTitle(const std::wstring& str);
 

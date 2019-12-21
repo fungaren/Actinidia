@@ -66,7 +66,7 @@ class SnakeView
     bool Using;                 // 防止过快改变方向产生Bug
 
 public:
-    SnakeView(HINSTANCE i);
+    SnakeView(HINSTANCE i, HWND parent);
     // 重新初始化游戏
     void GameStart();
     // 随机放置食物

@@ -6,8 +6,10 @@
 #include <map>
 std::map<HWND, const Window*> callbackSource;
 
-LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK Window::dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    if (callbackSource.find(hWnd) == callbackSource.end())
+        return DefWindowProc(hWnd, message, wParam, lParam);    // not registered
     switch (message)
     {
     case WM_KEYDOWN:
@@ -57,37 +59,35 @@ LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
         PostQuitMessage(0);
         break;
     default:
-    {auto x = callbackSource[hWnd];
-    if (!x->getElseHandler()(message, wParam, lParam))
-        return DefWindowProc(hWnd, message, wParam, lParam); }
-    }
+        if (!callbackSource[hWnd]->getElseHandler()(message, wParam, lParam))
+            return DefWindowProc(hWnd, message, wParam, lParam); }
     return 0;
 }
 
-void Window::looper(bool registClass)
+void Window::looper(HWND parent)
 {
     HINSTANCE hInstance = GetModuleHandle(NULL);
-    if (registClass)
-    {
-        WNDCLASSEXW wcex;
-        wcex.cbSize = sizeof(WNDCLASSEX);
-        wcex.style = CS_HREDRAW | CS_VREDRAW;
-        wcex.lpfnWndProc = dispacher;
-        wcex.cbClsExtra = 0;
-        wcex.cbWndExtra = 0;
-        wcex.hInstance = hInstance;
-        wcex.hIcon = NULL;
-        wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-        wcex.lpszMenuName = NULL;
-        wcex.lpszClassName = title.c_str();
-        wcex.hIconSm = NULL;
-        RegisterClassExW(&wcex);
+    std::wstring wndClassName = title + L"cls";
+    WNDCLASSEXW wcex;
+    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc = dispacher;
+    wcex.cbClsExtra = 0;
+    wcex.cbWndExtra = 0;
+    wcex.hInstance = hInstance;
+    wcex.hIcon = NULL;
+    wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wcex.lpszMenuName = NULL;
+    wcex.lpszClassName = wndClassName.c_str();
+    wcex.hIconSm = NULL;
+    RegisterClassExW(&wcex);
+    this->hWnd = CreateWindowW(wndClassName.c_str(), title.c_str(), WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, 0, width, height, parent, NULL, hInstance, NULL);
+    if (!hWnd) {
+        int x = GetLastError();
+        _ASSERT(0);
     }
-    this->hWnd = CreateWindowW(title.c_str(), title.c_str(), WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, 0, width, height, nullptr, nullptr, hInstance, nullptr);
-    if (!hWnd)
-        return;
     callbackSource[hWnd] = this;
     ShowWindow(hWnd, SW_SHOW);
     UpdateWindow(hWnd);
@@ -99,7 +99,7 @@ void Window::looper(bool registClass)
     }
 }
 
-void Window::refresh() const
+void Window::refresh()
 {
     RECT rc;
     GetClientRect(hWnd, &rc);
@@ -161,12 +161,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 #ifdef _GTK
 
-void Window::looper() const
+void Window::looper()
 {
 
 }
 
-void Window::refresh() const
+void Window::refresh()
 {
 
 }

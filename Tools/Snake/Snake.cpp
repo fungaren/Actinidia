@@ -6,24 +6,23 @@
 #include "Snake.h"
 #include <sstream>
 
-SnakeView::SnakeView(HINSTANCE i) : hInst(i)
+SnakeView::SnakeView(HINSTANCE i, HWND parent) : hInst(i)
 {
-    w.setElseHandler([](uint32_t message, LPARAM lParam, WPARAM wParam) {
+    w.setElseHandler([](uint32_t message, WPARAM wParam, LPARAM lParam) {
         switch (message) {
         case WM_GETMINMAXINFO:
             MINMAXINFO* lpMMI;  // Minimum size
             lpMMI = (MINMAXINFO*)lParam;
             lpMMI->ptMinTrackSize.x = 600;
             lpMMI->ptMinTrackSize.y = 390;
-        default:
-            return false;
+            return true;
         }
-        return true;
+        return false;
     });
     w.setPaintHandler([this](const GdiCanvas& gdi) {
         this->OnDraw(gdi);
     });
-    w.create(L"Snake", 600, 400, false);
+    w.create(L"Snake", 600, 400, parent);
 }
 
 void SnakeView::CreateGame()

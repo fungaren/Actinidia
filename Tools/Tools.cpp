@@ -2,8 +2,11 @@
 #include "resource.h"
 #include "Common/Canvas.h"
 
-HWND hWnd;
+// HWND of the dialog
+HWND hWnd = NULL;
+// HINSTANCE of the process
 HINSTANCE hInst;
+// Logo image
 ImageMatrix logo;
 
 inline void disableButtons()
@@ -339,7 +342,6 @@ SnakeView* easter = nullptr;
 
 INT_PTR CALLBACK MainDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    UNREFERENCED_PARAMETER(lParam);
     switch (message)
     {
     case WM_LBUTTONDBLCLK:
@@ -350,7 +352,7 @@ INT_PTR CALLBACK MainDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
         {
             if (easter)
                 delete easter;
-            easter = new SnakeView(hInst);
+            easter = new SnakeView(hInst, hWnd);
         }
     }
         break;
@@ -412,6 +414,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
     hInst = hInstance;
+
     DialogBox(hInst, MAKEINTRESOURCE(IDD_MAIN), NULL, MainDialog);
 
     MSG msg;

@@ -1,7 +1,4 @@
 #pragma once
-#include "..\\ActinidiaPacker\\TiXML\\tinyxml.h"
-#pragma comment(lib, "..\\ActinidiaPacker\\TiXML\\tinyxml.lib")
-#include "..\\ActinidiaUnpacker\\ActinidiaUnpacker.h"
 #include <codecvt>
 
 bool bDirectMode = false;		// load resources from directory directly

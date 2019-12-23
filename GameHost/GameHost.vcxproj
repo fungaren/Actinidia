@@ -95,7 +95,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Actinidia\ActinidiaGame.h" />
-    <ClInclude Include="Actinidia\ActinidiaResource.h" />
     <ClInclude Include="Common\DeviceResources.h" />
     <ClInclude Include="Common\DirectXHelper.h" />
     <ClInclude Include="Common\StepTimer.h" />
@@ -144,7 +143,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actinidia\ActinidiaGame.cpp" />
-    <ClCompile Include="Actinidia\ActinidiaResource.cpp" />
     <ClCompile Include="Common\DeviceResources.cpp" />
     <ClCompile Include="Content\Sample3DSceneRenderer.cpp" />
     <ClCompile Include="Content\SampleFpsTextRenderer.cpp" />

@@ -42,9 +42,12 @@ namespace winrt::GameHost::implementation
 	void MainPage::ButtonRunLocal_Click(IInspectable const& sender, RoutedEventArgs const& e)
 	{
 		using namespace Windows::UI::Popups;
-		auto dlg = MessageDialog(m_games.GetAt(GamelistView().SelectedIndex())
-			.try_as<ActinidiaGame>()->Title());
-		dlg.ShowAsync();
+        int32_t id = GamelistView().SelectedIndex();
+        if (id == -1) 
+            return;
+        auto dlg = MessageDialog(m_games.GetAt(id)
+            .try_as<ActinidiaGame>()->Title());
+        dlg.ShowAsync();
 	}
 
 	void MainPage::ButtonPlay_Click(IInspectable const& sender, RoutedEventArgs const& e)

@@ -29,10 +29,6 @@
     <ClCompile Include="Common\DeviceResources.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Actinidia\ActinidiaResource.cpp">
-      <Filter>Actinidia</Filter>
-    </ClCompile>
-    <ClCompile Include="DirectXPage.xaml.cpp" />
     <ClCompile Include="HostMain.cpp" />
     <ClCompile Include="Actinidia\ActinidiaGame.cpp">
       <Filter>Actinidia</Filter>
@@ -61,10 +57,6 @@
     <ClInclude Include="Common\StepTimer.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="Actinidia\ActinidiaResource.h">
-      <Filter>Actinidia</Filter>
-    </ClInclude>
-    <ClInclude Include="DirectXPage.xaml.h" />
     <ClInclude Include="HostMain.h" />
     <ClInclude Include="Actinidia\ActinidiaGame.h">
       <Filter>Actinidia</Filter>

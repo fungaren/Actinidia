@@ -13,15 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="libjpeg">
-      <UniqueIdentifier>{622b4567-ca1d-46e1-93cb-e223e305ad3d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="libpng">
-      <UniqueIdentifier>{3d420f6c-f205-4a6c-ad17-bf5d448d5ebe}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="zlib">
-      <UniqueIdentifier>{929664cd-691b-412c-9be1-d745880b6474}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Common">
       <UniqueIdentifier>{186a8d99-6d68-44c9-a7f1-b308f9ef6720}</UniqueIdentifier>
     </Filter>
@@ -36,47 +27,8 @@
     <ClInclude Include="resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="zlib\zconf.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib\zlib.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="libpng\png.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="libpng\pngconf.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="libpng\pnglibconf.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="libjpeg\jconfig.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="libjpeg\jmorecfg.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="libjpeg\jpeglib.h">
-      <Filter>libjpeg</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\Canvas.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\ImageMatrix.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\Window.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\ResourcePack.h">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="Snake\Snake.h">
       <Filter>Snake</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\Timer.h">
-      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

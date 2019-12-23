@@ -388,11 +388,11 @@ int GetSetting(lua_State *L)
 // lua: void SaveSetting(string key, string value)
 int SaveSetting(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 2) return 0;
-	std::string key = lua_tostring(L, 1);
-	std::string val = lua_tostring(L, 2);
-	prop[key] = val;
-	lua_pop(L, 2);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 2) return 0;
+    std::string key = lua_tostring(L, 1);
+    std::string val = lua_tostring(L, 2);
+    prop[key] = val;
+    lua_pop(L, 2);
+    return 0;
 }

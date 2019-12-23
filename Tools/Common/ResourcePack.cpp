@@ -231,7 +231,7 @@ ResourcePack ResourcePack::parsePack(const path& resFile)
     return pack;
 }
 
-bool ResourcePack::readResource(const std::wstring& pathname, uint8_t** p, uint32_t* size) const
+bool ResourcePack::readResource(std::wstring pathname, uint8_t** p, uint32_t* size) const
 {
     // the pathname should be like "./path/to/file.jpg"
     if (pathname[0] != L'.')

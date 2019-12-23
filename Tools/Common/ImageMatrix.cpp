@@ -1,5 +1,5 @@
 #include "pch.h"
-// Add these codes to pch.h
+// Add code below to pch.h and set C++ standard to 17
 /*
 #include <Windows.h>
 #undef max

@@ -58,12 +58,20 @@ class ResourcePack {
     ResourcePack(ResourcePack&& r) : list(r.list) {};
 
 public:
-
+    // Open a package and construct a ResourcePack instance.
+    // Will throw an exception for any error occurred.
     static ResourcePack parsePack(const std::filesystem::path& resFile) noexcept(false);
-    bool readResource(const std::wstring& pathname, uint8_t** p, uint32_t* size) const;
-    bool readResource(const std::wstring& pathname, char** p, uint32_t* size) const {
+    
+    // Read a file by path, the file pointer and file size
+    // will be stored in @p and @size. Return true if succuss.
+    // the pathname should be like "./path/to/file.jpg"
+    bool readResource(std::wstring pathname, uint8_t** p, uint32_t* size) const;
+    
+    // Read a file by path, the file pointer and file size
+    // will be stored in @p and @size. Return true if succuss.
+    // the pathname should be like "./path/to/file.jpg"
+    bool readResource(std::wstring pathname, char** p, uint32_t* size) const {
         return readResource(pathname, (uint8_t**)p, size);
     }
 
 };
-

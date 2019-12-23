@@ -94,6 +94,10 @@ public:
     static ImageMatrix fromPngFile(const char* pngFile) noexcept(false);
     static ImageMatrix fromPngFile(const wchar_t* pngFile) noexcept(false);
     static ImageMatrix fromPngBuffer(mem_image *mp) noexcept(false);
+    static ImageMatrix fromPngBuffer(void* pImageRes, size_t len) noexcept(false) {
+        mem_image img(pImageRes, len);
+        return fromPngBuffer(&img);
+    }
 #ifdef _WIN32
     static ImageMatrix fromPngResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
 #endif
@@ -101,6 +105,10 @@ public:
     static ImageMatrix fromJpegFile(const char* jpegFile) noexcept(false);
     static ImageMatrix fromJpegFile(const wchar_t* jpegFile) noexcept(false);
     static ImageMatrix fromJpegBuffer(mem_image *mp) noexcept(false);
+    static ImageMatrix fromJpegBuffer(void* pImageRes, size_t len) noexcept(false) {
+        mem_image img(pImageRes, len);
+        return fromJpegBuffer(&img);
+    }
 #ifdef _WIN32
     static ImageMatrix fromJpegResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
 #endif

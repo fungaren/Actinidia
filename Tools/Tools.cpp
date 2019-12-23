@@ -348,7 +348,7 @@ INT_PTR CALLBACK MainDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
     {
         short x = (short)LOWORD(lParam);
         short y = (short)HIWORD(lParam);
-        if (x > 0 && y > 0 && x < 300 && y < 100)
+        if (x > 0 && y > 0 && x < 350 && y < 100)
         {
             if (easter)
                 delete easter;

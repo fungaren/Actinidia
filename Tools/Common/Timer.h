@@ -11,10 +11,8 @@ public:
     void begin(std::chrono::milliseconds interval, std::function<void()> callback)
     {
         if (!canceled)
-        {
             end();
-            canceled = false;
-        }
+        canceled = false;
         timer = std::thread([](const Timer* timer,
             std::chrono::milliseconds interval,
             std::function<void()> callback)
@@ -28,7 +26,8 @@ public:
     void end()
     {
         canceled = true;
-        timer.join();
+        if (timer.joinable())
+            timer.join();
     }
     ~Timer()
     {

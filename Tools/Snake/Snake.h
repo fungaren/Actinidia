@@ -13,13 +13,12 @@
 
 // 棋盘属性
 #define WID    18
-#define HEI    10
+#define HEI    11
 #define FOOD    -1
 #define EMPTY  0
 
-// 游戏选项
-#define FAST       100
-#define SLOW       200
+// 游戏选项 蛇的速度（定时器Interval属性）
+#define SPEED      100
 #define DEFAULTLEN 4
 #define FOODSIZE   -3
 #define TEXTSIZE   64
@@ -56,19 +55,17 @@ class SnakeView
     int Mode;                   // 游戏模式
     int EdgeWidth;              // 边宽，不计线宽
     int SnakeLen;               // 蛇的长度
-
-    int Speed;                  // 蛇的速度（定时器Interval属性）
-
     bool Eaten;                 // 是否吃了东西
-    bool isPause;               // 是否已经暂停
-    bool StartNew;              // 是否需要开新游戏
-    bool GameOver;              // 游戏结束
+    
+    enum State {
+        Gaming, GameOver, Welcome, Pause
+    };
+    State GameState;
     bool Using;                 // 防止过快改变方向产生Bug
 
 public:
+    // Constructor
     SnakeView(HINSTANCE i, HWND parent);
-    // 重新初始化游戏
-    void GameStart();
     // 随机放置食物
     void SetFood();
     // 绘制食物
@@ -92,63 +89,57 @@ public:
     void StopTimer() {
         timer.end();
     }
-    void CreateGame();
+
+    // Message Handlers
     void OnDraw(const GdiCanvas&);
     void OnKeyDown(int key);
-    void OnStart();
     void OnTimer();
-    void OnFastspeed();
-    void OnSlowspeed();
 };
 
 // 绘制向上的头
 inline void DrawHeadToUp(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::color color) {
-    PlatformIndependenceCanvas::rectangle(
+    PlatformIndependenceCanvas::fillSolidRect(
         img, 
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
         EdgeWidth * (y - 1) + y + EdgeWidth / 4,
         EdgeWidth * (x - 1) + x + EdgeWidth * 3 / 4,
         EdgeWidth * (y - 1) + y + EdgeWidth,
-        Canvas::solid,
         color
     );
 }
 
 // 绘制向下的头
 inline void DrawHeadToDown(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::color color) {
-    PlatformIndependenceCanvas::rectangle(
+    PlatformIndependenceCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
         EdgeWidth * (y - 1) + y - 1,
         EdgeWidth * (x - 1) + x + EdgeWidth * 3 / 4,
         EdgeWidth * (y - 1) + y + EdgeWidth * 3 / 4,
-        Canvas::solid,
         color
     );
 }
 
 // 绘制向左的头
 inline void DrawHeadToLeft(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::color color) {
-    PlatformIndependenceCanvas::rectangle(
+    PlatformIndependenceCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
         EdgeWidth * (y - 1) + y + EdgeWidth / 4,
         EdgeWidth * (x - 1) + x + EdgeWidth,
         EdgeWidth * (y - 1) + y + EdgeWidth * 3 / 4,
-        Canvas::solid,
         color
     );
 }
 
 // 绘制向右的头
 inline void DrawHeadToRight(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::color color) {
-    PlatformIndependenceCanvas::rectangle(
+    PlatformIndependenceCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x - 1,
         EdgeWidth * (y - 1) + y + EdgeWidth / 4,
         EdgeWidth * (x - 1) + x + EdgeWidth * 3 / 4,
         EdgeWidth * (y - 1) + y + EdgeWidth * 3 / 4,
-        Canvas::solid,
         color
     );
 }

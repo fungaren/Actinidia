@@ -14,7 +14,7 @@ SnakeView::SnakeView(HINSTANCE i, HWND parent) : hInst(i)
             MINMAXINFO* lpMMI;  // Minimum size
             lpMMI = (MINMAXINFO*)lParam;
             lpMMI->ptMinTrackSize.x = 600;
-            lpMMI->ptMinTrackSize.y = 390;
+            lpMMI->ptMinTrackSize.y = 360;
             return true;
         }
         return false;
@@ -22,19 +22,19 @@ SnakeView::SnakeView(HINSTANCE i, HWND parent) : hInst(i)
     w.setPaintHandler([this](const GdiCanvas& gdi) {
         this->OnDraw(gdi);
     });
+    w.setKeyDownHandler([this](int key) {
+        this->OnKeyDown(key);
+    });
     w.create(L"Snake", 600, 400, parent);
-}
 
-void SnakeView::CreateGame()
-{
-    Speed = FAST;
-    StartNew = true;
+    GameState = State::Welcome;
 }
 
 void SnakeView::OnDraw(const GdiCanvas& gdi)
 {
     auto& size = w.getSize();
-    if (StartNew) {
+    if (GameState == State::Welcome)
+    {
         gdi.fillSolidRect(0, 0, size.first, size.second, BACKGROUNDCOLOR);
 
         ImageMatrix welcome = ImageMatrixFactory::fromPngResource(IDB_WELCOME, L"PNG", hInst);
@@ -42,6 +42,8 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
             welcome.getWidth(), welcome.getHeight(), 0, 0, welcome.getWidth(), welcome.getHeight());
         return;
     }
+
+    std::wostringstream buf;
     // 游戏已经开始，重绘一般由定时器触发，也可能通过窗口缩放触发
     CountEdgeWidth(size);    // 重新计算边宽
 
@@ -52,7 +54,12 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
     DrawSnake(img);          // 绘制蛇
     DrawFood(img);           // 绘制食物
 
-    if (GameOver) {
+    switch (GameState)
+    {
+    case State::Gaming:
+        gdi.paste(img, 0, 0);
+        break;
+    case State::GameOver:
         StopTimer();
         // 产生碰撞效果
         switch (Direction)
@@ -72,41 +79,17 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
         default:
             break;
         }
-    }
-    gdi.paste(img, 0, 0);
-    if (GameOver)
-    {
+        gdi.paste(img, 0, 0);
         // 结束游戏
-        std::wostringstream buf;
         buf << GAMEOVER << SCORE << GamePoint();
         gdi.printText(150, 100, buf.str(), 12, TEXTFONT, TEXTSIZE, FONTCOLOR);
-        StartNew = true;            // 下次要按空格开始游戏
+        break;
+    case State::Pause:
+        gdi.paste(img, 0, 0);
+        // 显示暂停文字
+        gdi.printText(150, 100, GAMEPAUSE, 4, TEXTFONT, TEXTSIZE, FONTCOLOR);
+        break;
     }
-    else if (isPause)
-    {
-        gdi.printText(150, 100, GAMEPAUSE, 4, TEXTFONT, TEXTSIZE, FONTCOLOR); // 显示暂停文字
-    }
-}
-
-// 重新初始化游戏
-void SnakeView::GameStart()
-{
-    memset(Board, 0, sizeof(Board));    // 初始化棋盘
-    isPause = false;                    // 未暂停状态
-    StartNew = false;
-    Using = false;                      // 默认未占用方向
-    Direction = TORIGHT;                // 默认方向向右
-    Eaten = false;                      // 没吃食物
-
-    SnakeLen = DEFAULTLEN;              // 默认长度
-    HeadPosX = (WID + DEFAULTLEN) / 2;  // 默认蛇的位置X
-    HeadPosY = HEI / 2;                 // 默认蛇的位置Y
-    for (int i = 0; i < SnakeLen; i++) {
-        Board[HeadPosX - i][HeadPosY] = i + 1;  // 放置初始蛇
-    }
-
-    SetFood();         // 设置食物
-    SetTimer(Speed);   // 开启定时器
 }
 
 // 计算EdgeWidth
@@ -172,7 +155,7 @@ void SnakeView::DrawFood(ImageMatrix& img)
         EdgeWidth * (FoodPosY - 1) + FoodPosY - FOODSIZE,
         EdgeWidth + 2 * (FOODSIZE),
         EdgeWidth + 2 * (FOODSIZE),
-        0, 0, img.getWidth(), img.getHeight(), 255
+        0, 0, food.getWidth(), food.getHeight(), 255
     );
 }
 
@@ -383,7 +366,7 @@ int SnakeView::SnakeGo()
             Board[leftx][lefty] = 1;        // 往左边方向设置一个蛇头
             if (SnakeLen == WID * HEI - 1)  // 如果满屏爆表了
             {
-                GameOver = true;            // 游戏结束
+                GameState = State::GameOver;
                 return GOFULLSCREEN;        // 退出函数，输出彩蛋
             }
             Eaten = true;
@@ -391,7 +374,7 @@ int SnakeView::SnakeGo()
         default:                            // 碰到身体
             if (Board[leftx][lefty] != SnakeLen)
             {
-                GameOver = true;            // 游戏结束
+                GameState = State::GameOver;
                 return GOGAMEOVER;          // 返回
             }
             else
@@ -416,7 +399,7 @@ int SnakeView::SnakeGo()
             Board[rightx][righty] = 1;      // 往右边方向设置一个蛇头
             if (SnakeLen == WID * HEI - 1)  // 如果满屏爆表了
             {
-                GameOver = true;            // 游戏结束
+                GameState = State::GameOver;
                 return GOFULLSCREEN;        // 退出函数，输出彩蛋
             }
             Eaten = true;
@@ -424,7 +407,7 @@ int SnakeView::SnakeGo()
         default:                            // 碰到身体
             if (Board[rightx][righty] != SnakeLen)
             {
-                GameOver = true;            // 游戏结束
+                GameState = State::GameOver;
                 return GOGAMEOVER;          // 返回
             }
             else
@@ -449,7 +432,7 @@ int SnakeView::SnakeGo()
             Board[upx][upy] = 1;            // 往上边方向设置一个蛇头
             if (SnakeLen == WID * HEI - 1)  // 如果满屏爆表了
             {
-                GameOver = true;            // 游戏结束
+                GameState = State::GameOver;
                 return GOFULLSCREEN;        // 退出函数，输出彩蛋
             }
             Eaten = true;
@@ -457,7 +440,7 @@ int SnakeView::SnakeGo()
         default:                            // 碰到身体
             if (Board[upx][upy] != SnakeLen)
             {
-                GameOver = true;            // 游戏结束
+                GameState = State::GameOver;
                 return GOGAMEOVER;          // 返回
                 break;
             }
@@ -483,7 +466,7 @@ int SnakeView::SnakeGo()
             Board[downx][downy] = 1;        // 往下边方向设置一个蛇头
             if (SnakeLen == WID * HEI - 1)  // 如果满屏爆表了
             {
-                GameOver = true;            // 游戏结束
+                GameState = State::GameOver;
                 return GOFULLSCREEN;        // 退出函数，输出彩蛋
             }
             Eaten = true;
@@ -491,7 +474,7 @@ int SnakeView::SnakeGo()
         default:                            // 碰到身体
             if (Board[downx][downy] != SnakeLen)
             {
-                GameOver = true;            // 游戏结束
+                GameState = State::GameOver;
                 return GOGAMEOVER;          // 返回
             }
             else
@@ -606,20 +589,34 @@ void SnakeView::OnKeyDown(int key)
     {
     case VK_RETURN:
     case VK_SPACE:
-        if (StartNew) {
-            GameStart();
-        }
-        else {
-            if (isPause)
-            {
-                SetTimer(Speed);
-                isPause = false;                // 取消暂停
+        switch (GameState)
+        {
+        case State::GameOver:
+        case State::Welcome:
+            memset(Board, 0, sizeof(Board));    // 初始化棋盘
+            Using = false;                      // 默认未占用方向
+            Direction = TORIGHT;                // 默认方向向右
+            Eaten = false;                      // 没吃食物
+
+            SnakeLen = DEFAULTLEN;              // 默认长度
+            HeadPosX = (WID + DEFAULTLEN) / 2;  // 默认蛇的位置X
+            HeadPosY = HEI / 2;                 // 默认蛇的位置Y
+            for (int i = 0; i < SnakeLen; i++) {
+                Board[HeadPosX - i][HeadPosY] = i + 1;  // 放置初始蛇
             }
-            else
-            {
-                StopTimer();
-                isPause = true;                 // 暂停游戏
-            }
+
+            SetFood();         // 设置食物
+            SetTimer(SPEED);   // 开启定时器
+            GameState = State::Gaming;
+            break;
+        case State::Pause:
+            SetTimer(SPEED);
+            GameState = State::Gaming;  // 取消暂停
+            break;
+        case State::Gaming:
+            StopTimer();
+            GameState = State::Pause;  // 暂停游戏
+            break;
         }
         break;
     case VK_UP:
@@ -661,57 +658,17 @@ void SnakeView::OnTimer()
 {
     Using = false;                  // 解除占用
     // 定时器只负责调用蛇运动的计算，接着在画图消息里重绘
-    int result = SnakeGo();         // 分析蛇 吃了食物自动SetFood
-    switch (result)
+    switch (SnakeGo())  // 分析蛇 吃了食物自动SetFood
     {
     case GOSUCCESS:
         w.refresh();
         break;
     case GOGAMEOVER:
+        w.refresh();
         break;
     case GOFULLSCREEN:
+        w.refresh();
         w.alert(YOUWIN); // 输出彩蛋
         break;
     }
 }
-
-// 菜单：开始/暂停
-void SnakeView::OnStart()
-{
-    if (StartNew) {
-        GameStart();
-    }
-    else {
-        if (isPause)
-        {
-            SetTimer(Speed);
-            isPause = false;                // 取消暂停
-        }
-        else
-        {
-            StopTimer();
-            isPause = true;                 // 暂停游戏
-        }
-    }
-}
-
-void SnakeView::OnFastspeed()
-{
-    Speed = FAST;
-    if (!StartNew) {    // 游戏状态下，重置定时器
-        StopTimer();
-        isPause = false;
-        SetTimer(Speed);
-    }
-}
-
-void SnakeView::OnSlowspeed()
-{
-    Speed = SLOW;
-    if (!StartNew) {    // 游戏状态下，重置定时器
-        StopTimer();
-        isPause = false;
-        SetTimer(Speed);
-    }
-}
-

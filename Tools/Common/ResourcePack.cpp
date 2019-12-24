@@ -2,6 +2,7 @@
 #include "ResourcePack.h"
 #include <fstream>
 #include <sstream>
+#include <queue>
 
 inline void _trace(std::wstring str) {
 #ifdef _DEBUG
@@ -13,29 +14,29 @@ using namespace std::filesystem;
 
 bool generatePack(const std::wstring& destFile, const path& resDirectory)
 {
-    // destination
-    std::ofstream dst(destFile, std::ios::binary);
-
-    std::vector<uint32_t> folder_size = { 0 };
     std::vector<path> folder_path = { resDirectory };
-    std::vector<directory_iterator> _i;     // used to store i of parent folder
-    std::vector<std::string> _foldername;   // used to store foldername of parent folder
+    // store meta info to be output
+    std::list<std::tuple<entity, std::string, std::ifstream*>> queue;
+    // store iterator of parent folder
+    std::vector<std::pair<directory_iterator, decltype(queue)::iterator>> parent_iterator;
+
     directory_iterator i;
     uint8_t depth = 0;
-
 recursive:
     // enter the directory
     std::string foldername = folder_path.back().filename().u8string();
+    i = directory_iterator(folder_path.back());
 
     // write entity + file name
     entity e{ TYPE_FOLDER, 0, (uint16_t)foldername.size(), 0 };
-    dst.write((char*)&e, sizeof entity);
-    dst << foldername;
+    // store
+    queue.push_back({ e, foldername, nullptr });
+    parent_iterator.push_back({ i,--queue.end() });
+
+    ++depth;
 
     // walk the directory
-    for (i = directory_iterator(folder_path.back());
-        i != directory_iterator();
-        ++i)
+    while(i != directory_iterator())
     {
         if (depth == 255)
             return false;       // not support depth > 255
@@ -43,22 +44,17 @@ recursive:
         if (i->is_directory())
         {
             _trace(static_cast<path>(*i).filename());
-
             folder_path.push_back(*i);
-            folder_size.push_back(0);
-
-            // back up current i & folder name
-            _i.push_back(i);
-            _foldername.push_back(foldername);
-            ++depth;
-
             goto recursive;
         resume:
-            // restore backed i & folder name
-            i = _i.back();
-            foldername = _foldername.back();
-            _i.pop_back();
-            _foldername.pop_back();
+            // update parent folder size
+            auto h = std::get<0>(*parent_iterator.rbegin()->second);
+            parent_iterator.pop_back();
+            std::get<0>(*(parent_iterator.rbegin()->second)).dataSize += 
+                sizeof(entity) + h.nameSize + h.dataSize;
+            // restore
+            i = parent_iterator.back().first;
+            ++i;
         }
         else if (i->is_regular_file())
         {
@@ -71,27 +67,38 @@ recursive:
 
             // write entity + file name + data
             entity e{ TYPE_FILE, 0, name_size, file_size };
-            dst.write((char*)&e, sizeof(entity));
-            dst << filename;
-            dst << std::ifstream(*i, std::ios::binary).rdbuf();
+            queue.push_back({ e, filename, new std::ifstream(*i, std::ios::binary) });
 
-            // update folder size
-            folder_size.back() += sizeof(entity) + name_size + file_size;
+            // update parent folder size
+            auto h = parent_iterator.rbegin()->second;
+            std::get<0>(*h).dataSize += sizeof(entity) + name_size + file_size;
+            ++i;
         }
     }
-    // set directory size
-    int _s = folder_size.back();
-    dst.seekp(-_s - (int)foldername.size() - (int)sizeof(uint32_t), std::ios::cur);
-    dst.write((char*)&_s, sizeof(uint32_t));
-    dst.seekp(0, std::ios::end);
     // back to parent directory
-    folder_size.pop_back();
     folder_path.pop_back();
-
-    if (!folder_size.empty()) {
-        folder_size.back() += (int)sizeof(entity) + (int)foldername.size() + _s;
+    if (!folder_path.empty()) {
         --depth;
         goto resume;
+    }
+
+    std::ofstream dst(destFile, std::ios::binary);
+    dst << MAGIC; // Magic
+    for (auto& t : queue) {
+        dst.write((char*)&std::get<0>(t), sizeof entity); // Entity
+        dst << std::get<1>(t); // Name
+        auto p = std::get<2>(t);
+        if (p)
+        {
+            p->seekg(0, std::ios::end);
+            std::streampos pos = p->tellg();
+            if (pos != 0)
+            {
+                p->seekg(0, std::ios::beg);
+                dst << p->rdbuf(); // Data
+            }
+            delete p;
+        }
     }
     return true;
 }
@@ -103,6 +110,14 @@ void parsePack(std::istream& res,
     path relativePath(".");
     std::vector<uint32_t> folder_size;
 
+    for (int i = 0; i < sizeof MAGIC - 1; i++) {
+        if (MAGIC[i] != res.get())
+        {
+            std::runtime_error e("Invalid resouce pack");
+            throw(e);
+        }
+    }
+    
     do {
         entity e;
         res.read((char*)&e, sizeof(entity));
@@ -176,14 +191,13 @@ void parsePack(std::istream& res,
 
 bool extractPack(const path& resFile)
 {
-    std::ifstream res(resFile, std::ios::binary);
-
     std::ostringstream extract_dir_name;
     extract_dir_name << "extract_" << time(NULL);
     path folder_path = resFile.parent_path() / extract_dir_name.str();
 
     create_directory(folder_path);  // extract files to this folder
 
+    std::ifstream res(resFile, std::ios::binary);
     try {
         parsePack(
             res,

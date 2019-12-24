@@ -14,6 +14,7 @@
 */
 const uint8_t TYPE_FOLDER = 0x01;
 const uint8_t TYPE_FILE = 0x00;
+const char MAGIC[] = "ACTINIDIA";
 
 struct entity {
     uint8_t type;       // entity type

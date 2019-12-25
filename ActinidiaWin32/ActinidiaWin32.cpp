@@ -2,6 +2,7 @@
 #include "../Tools/Common/Window.h"
 #include "../Tools/Common/ResourcePack.h"
 
+static ImageMatrix img;
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR    lpCmdLine,
@@ -9,15 +10,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-    Window w;
-    w.create(L"demo");
 
     ResourcePack pack = ResourcePack::parsePack("demo.res");
     char* p;
     uint32_t size;
+    static Window w;
     if (pack.readResource(L"./demo/actinidia.png", &p, &size))
     {
-        ImageMatrix img = ImageMatrixFactory::fromPngBuffer(p, size);
-        
+        img = ImageMatrixFactory::fromPngBuffer(p, size);
+        w.setPaintHandler([](const GdiCanvas& gdi) {
+            auto w_size = w.getSize();
+            ImageMatrix temp = ImageMatrixFactory::createBufferImage(
+                w_size.first, w_size.second, Canvas::Constant::white
+            );
+            PiCanvas::blend(temp, img, 0, 0, 255);
+            gdi.paste(temp, 0, 0);
+        });
+        w.create(L"demo");
     }
+    
+    return 0;
 }

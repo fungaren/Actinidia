@@ -163,19 +163,22 @@ void parsePack(std::istream& res,
         {
             // calc remaining bytes in this folder to be read
             folder_size.back() -= e.nameSize + sizeof(entity) + e.dataSize;
-
+            
+            if (e.dataSize != 0)
+            {
 #if _DEBUG
-            std::streampos p = res.tellg();
+                std::streampos p = res.tellg();
 
-            // dump file or read file
-            new_file(res, relativePath, e.dataSize);
+                // dump file or read file
+                new_file(res, relativePath, e.dataSize);
 
-            // you must consume these bytes
-            _ASSERT(res.tellg() == p + std::streamoff(e.dataSize));
+                // you must consume these bytes
+                _ASSERT(res.tellg() == p + std::streamoff(e.dataSize));
 #else
-            // dump file or read file
-            new_file(res, relativePath, e.dataSize);
-#endif
+                // dump file or read file
+                new_file(res, relativePath, e.dataSize);
+#endif /* _DEBUG */
+            }
 
             // back to parent folder
             relativePath = relativePath.parent_path();

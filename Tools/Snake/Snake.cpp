@@ -35,11 +35,11 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
     auto& size = w.getSize();
     if (GameState == State::Welcome)
     {
-        gdi.fillSolidRect(0, 0, size.first, size.second, BACKGROUNDCOLOR);
-
+        ImageMatrix temp = ImageMatrixFactory::createBufferImage(size.first, size.second, BACKGROUNDCOLOR);
         ImageMatrix welcome = ImageMatrixFactory::fromPngResource(IDB_WELCOME, L"PNG", hInst);
-        gdi.paste(welcome, (size.first - welcome.getWidth()) / 2, (size.second - welcome.getHeight()) / 2,
-            welcome.getWidth(), welcome.getHeight(), 0, 0, welcome.getWidth(), welcome.getHeight());
+        PiCanvas::blend(temp, welcome, (size.first - welcome.getWidth()) / 2, (size.second - welcome.getHeight()) / 2,
+            welcome.getWidth(), welcome.getHeight(), 0, 0, welcome.getWidth(), welcome.getHeight(), 255);
+        gdi.paste(temp, 0, 0);
         return;
     }
 

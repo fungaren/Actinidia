@@ -12,7 +12,7 @@ inline void _trace(std::wstring str) {
 
 using namespace std::filesystem;
 
-bool generatePack(const std::wstring& destFile, const path& resDirectory)
+bool generatePack(const std::string& destFile, const path& resDirectory)
 {
     std::vector<path> folder_path = { resDirectory };
     // store meta info to be output
@@ -105,7 +105,7 @@ recursive:
 
 void parsePack(std::istream& res,
     std::function<void (const path&)> new_folder,
-    std::function<void (std::istream&, const path&, uint32_t)> new_file)
+    std::function<void (std::istream&, const path&, uint32_t)> new_file) noexcept(false)
 {
     path relativePath(".");
     std::vector<uint32_t> folder_size;
@@ -192,7 +192,7 @@ void parsePack(std::istream& res,
     } while (relativePath != ".");
 }
 
-bool extractPack(const path& resFile)
+bool extractPack(const path& resFile) noexcept(false)
 {
     std::ostringstream extract_dir_name;
     extract_dir_name << "extract_" << time(NULL);
@@ -201,6 +201,10 @@ bool extractPack(const path& resFile)
     create_directory(folder_path);  // extract files to this folder
 
     std::ifstream res(resFile, std::ios::binary);
+    if (!res.good()) {
+        std::runtime_error e("Can not open file");
+        throw e;
+    }
     try {
         parsePack(
             res,
@@ -229,9 +233,13 @@ bool extractPack(const path& resFile)
     return true;
 }
 
-ResourcePack ResourcePack::parsePack(const path& resFile)
+ResourcePack ResourcePack::parsePack(const path& resFile) noexcept(false)
 {
     std::ifstream res(resFile, std::ios::binary);
+    if (!res.good()) {
+        std::runtime_error e("Can not open file");
+        throw e;
+    }
     ResourcePack pack;
     ::parsePack(
         res,
@@ -241,14 +249,14 @@ ResourcePack ResourcePack::parsePack(const path& resFile)
         [&pack](std::istream& res, const path& relativePath, uint32_t dataSize) {
             uint8_t* data = new uint8_t[dataSize];
             res.read((char*)data, dataSize);
-            pack.list.emplace_back(relativePath, data, dataSize);
+            pack.list.emplace_back(relativePath.u8string(), data, dataSize);
         }
     );
 
     return pack;
 }
 
-bool ResourcePack::readResource(std::wstring pathname, uint8_t** p, uint32_t* size) const
+bool ResourcePack::readResource(std::string pathname, uint8_t** p, uint32_t* size) const
 {
     // the pathname should be like "./path/to/file.jpg"
     if (pathname[0] != L'.')
@@ -256,7 +264,7 @@ bool ResourcePack::readResource(std::wstring pathname, uint8_t** p, uint32_t* si
 
     // Converts all directory separators in the generic-format view of the
     // path to the preferred directory separator. 
-    const std::wstring pathname_ = static_cast<path>(pathname).make_preferred().wstring();
+    const std::string pathname_ = static_cast<path>(pathname).make_preferred().string();
 
     auto i = std::find_if(list.begin(), list.end(), 
         [&pathname_](const ResourceFile& i) {

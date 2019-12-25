@@ -56,7 +56,7 @@ public:
     }
 };
 
-typedef std::shared_ptr<ImageMatrix> pImageMatrix;
+typedef ImageMatrix* pImageMatrix;
 
 class ImageMatrixFactory {
 

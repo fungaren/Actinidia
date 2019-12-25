@@ -146,7 +146,7 @@ void SnakeView::DrawFood(pImageMatrix img)
         food = ImageMatrixFactory::fromPngResource(IDB_FOOD, L"PNG", hInst);
     }
     catch (std::runtime_error) {
-        w.alert(IMGERROR);     // 图片加载失败
+        w.alert(IMGERROR, L"Error");     // 图片加载失败
         return;
     }
     PiCanvas::blend(img,
@@ -668,7 +668,7 @@ void SnakeView::OnTimer()
         break;
     case GOFULLSCREEN:
         w.refresh();
-        w.alert(YOUWIN); // 输出彩蛋
+        w.alert(YOUWIN, YOUWIN); // 输出彩蛋
         break;
     }
 }

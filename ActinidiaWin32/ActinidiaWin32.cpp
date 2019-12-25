@@ -2,25 +2,95 @@
 #include "../Tools/Common/Window.h"
 #include "../Tools/Common/ResourcePack.h"
 
-#define MIN_WIDTH 200
-#define MIN_HEIGHT 100
-int WIN_WIDTH = 1024;
-int WIN_HEIGHT = 768;
+// callbacks
+bool OnInit();
+void OnClean();
+void OnSetFocus();
+void OnKillFocus();
+void OnPaint(const GdiCanvas& gdi);
+void OnClose();
+void OnKeyDown(int key);
+void OnKeyUp(int key);
+void OnLButtonDown(uint32_t, int x, int y);
+void OnLButtonUp(uint32_t, int x, int y);
+void OnMouseMove(uint32_t, int x, int y);
+void OnMouseWheel(uint32_t, short zDelta, int x, int y);
 
-bool InitApp(LPCTSTR lpCmdLine)
+bool bDirectMode;
+// resource file or resource folder
+std::wstring game_res = L"game.res";
+ResourcePack pack;
+// user data
+std::wstring user_data_path;
+std::map<const std::string, std::string> user_data;
+// GUI
+Window w;
+
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPWSTR    lpCmdLine,
+    _In_ int       nCmdShow)
 {
-    if (0 == lstrcmp(lpCmdLine, L"DirectMode"))
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    int argc;
+    LPWSTR *argv = CommandLineToArgvW(lpCmdLine, &argc);
+    if (argc == 1)
     {
-        bDirectMode = true;
+        try {
+            // no resource file specified, use default
+            pack = std::move(ResourcePack::parsePack(game_res));
+            bDirectMode = false;
+        }
+        catch (std::runtime_error e) {
+            MessageBox(NULL, L"Failed to load default resource file \"game.res\"", L"Error", MB_OK);
+            LocalFree(argv);
+            return 1;
+        }
     }
-    else if (!InitLoader())
+    else if (argc == 2)
     {
-        MessageBoxA(NULL, "Fail to load resources!", STR_ERR_TITLE, MB_ICONERROR);
-        return false;
+        std::filesystem::path path = argv[1];
+        if (!std::filesystem::exists(path)) {
+            LocalFree(argv);
+            return 1;
+        }
+        // Directory: Direct Mode
+        if (std::filesystem::is_directory(path))
+        {
+            bDirectMode = true;
+            game_res = argv[1];
+        }
+        // Resource file
+        else if (path.extension() == L"res")
+        {
+            try {
+                // use specified resource file
+                pack = std::move(ResourcePack::parsePack(path));
+                bDirectMode = false;
+                game_res = path.filename();
+            }
+            catch (std::runtime_error e) {
+                MessageBox(NULL, L"Failed to load the resource file", L"Error", MB_OK);
+                LocalFree(argv);
+                return 1;
+            }
+        }
+        else {
+            MessageBox(NULL, L"Invalid resource file", L"Error", MB_OK);
+            LocalFree(argv);
+            return 1;
+        }
     }
+    LocalFree(argv);
 
     // load user data
-    std::ifstream in(bDirectMode ? "res\\data" : "data", std::ios::in);
+    if (bDirectMode) {
+        user_data_path = std::filesystem::path(game_res).filename().wstring() + L".data";
+    }
+    else {
+        user_data_path = game_res + L".data";
+    }
+    std::ifstream in(user_data_path);
     char buff[1024];
     if (in.good()) {
         while (in.getline(buff, 1024)) {
@@ -28,124 +98,43 @@ bool InitApp(LPCTSTR lpCmdLine)
             const char* pos = strchr(buff, '=');	// eg. best = 999
             if (pos != NULL) {
                 std::string key(buff, pos - buff);
-                prop[key] = std::string(pos + 1);
+                user_data[key] = std::string(pos + 1);
             }
         }
     }
     in.close();
 
-    BASS_Init(-1, 44100, 0, 0, 0);
-
-    L = luaL_newstate();
-    luaL_openlibs(L);
-
-    lua_register(L, "CreateImage", CreateImage);
-    lua_register(L, "CreateImageEx", CreateImageEx);
-    lua_register(L, "CreateTransImage", CreateTransImage);
-    lua_register(L, "DeleteImage", DeleteImage);
-    lua_register(L, "GetWidth", GetWidth);
-    lua_register(L, "GetHeight", GetHeight);
-    lua_register(L, "GetText", GetText);
-    lua_register(L, "GetImage", GetImage);
-    lua_register(L, "GetSound", GetSound);
-    lua_register(L, "EmptyStack", EmptyStack);
-    lua_register(L, "PasteToImage", PasteToImage);
-    lua_register(L, "PasteToImageEx", PasteToImageEx);
-    lua_register(L, "AlphaBlend", AlphaBlend);
-    lua_register(L, "AlphaBlendEx", AlphaBlendEx);
-    lua_register(L, "PasteToWnd", PasteToWnd);
-    lua_register(L, "PasteToWndEx", PasteToWndEx);
-    lua_register(L, "StopSound", StopSound);
-    lua_register(L, "SetVolume", SetVolume);
-    lua_register(L, "PlaySound", PlaySound);
-    lua_register(L, "Screenshot", Screenshot);
-    lua_register(L, "GetSetting", GetSetting);
-    lua_register(L, "SaveSetting", SaveSetting);
-
-    LPBYTE pMem;
-    long size = GetFile("res\\config.ini", &pMem);	// Load configure
-    if (size > 0)
-    {
-        std::string conf_str((char*)pMem, size);
-        conf_str += '\n';
-
-        // Get client size
-        int result = conf_str.find("preferred_width", 0);
-        if (result >= 0) {
-            int w_begin = 1 + conf_str.find('=', result);
-            int w_end = conf_str.find('\n', w_begin);
-            result = std::stoi(conf_str.substr(w_begin, w_end - w_begin));
-            if (result > MIN_WIDTH) WIN_WIDTH = result;
+    // set callbacks
+    w.setLButtonDownHandler(OnLButtonDown);
+    w.setLButtonUpHandler(OnLButtonUp);
+    w.setPaintHandler(OnPaint);
+    w.setKeyDownHandler(OnKeyDown);
+    w.setKeyUpHandler(OnKeyUp);
+    w.setMouseMoveHandler(OnMouseMove);
+    w.setMouseWheelHandler(OnMouseWheel);
+    w.setElseHandler([](uint32_t message, WPARAM, LPARAM) {
+        switch (message) {
+        case WM_SETFOCUS:
+            OnSetFocus();
+            return true;
+        case WM_KILLFOCUS:
+            OnKillFocus();
+            return true;
         }
-        result = conf_str.find("preferred_height", 0);
-        if (result >= 0) {
-            int w_begin = 1 + conf_str.find('=', result);
-            int w_end = conf_str.find('\n', w_begin);
-            result = std::stoi(conf_str.substr(w_begin, w_end - w_begin));
-            if (result > MIN_HEIGHT) WIN_HEIGHT = result;
-        }
-    }
-
-    size = GetFile("res\\lua\\main.lua", &pMem);			// Load scripts & set screen size
-    if (size > 0 && luaL_loadbuffer(L, (char*)pMem, size, "line") == 0 && lua_pcall(L, 0, LUA_MULTRET, 0) == 0)
-    {
-        lua_getglobal(L, "core");
-        lua_pushinteger(L, WIN_WIDTH);
-        lua_setfield(L, -2, "screenwidth");
-        lua_getglobal(L, "core");
-        lua_pushinteger(L, WIN_HEIGHT);
-        lua_setfield(L, -2, "screenheight");
-        return true;
-    }
-    else
-    {
-        MessageBoxA(NULL, "Fail to load main script!", STR_ERR_TITLE, MB_ICONERROR);
         return false;
-    }
-}
+    });
+    w.setExitCallback([](uint32_t, WPARAM, LPARAM) {
+        OnClose();
 
-inline void CleanAll()
-{
-    if (!bDirectMode)
-        fclose(pPackFile);
+        // save user data
+        std::ofstream out(user_data_path);
+        for (auto& p : user_data) {
+            out << p.first.c_str() << '=' << p.second.c_str() << '\n';
+        }
+        out.close();
 
-    BASS_Free();
-    lua_close(L);
-
-    // save user data
-    std::ofstream out(bDirectMode ? "res\\data" : "data", std::ios::out);
-    for (std::pair<const std::string, std::string> p in prop) {
-        out << p.first.c_str() << '=' << p.second.c_str() << '\n';
-    }
-    out.close();
-}
-
-pImageMatrix img;
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPWSTR    lpCmdLine,
-    _In_ int       nCmdShow)
-{
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
-
-    ResourcePack pack = ResourcePack::parsePack("demo.res");
-    char* p;
-    uint32_t size;
-    static Window w;
-    if (pack.readResource(L"./demo/actinidia.png", &p, &size))
-    {
-        img = ImageMatrixFactory::fromPngBuffer(p, size);
-        w.setPaintHandler([](const GdiCanvas& gdi) {
-            auto w_size = w.getSize();
-            auto temp = ImageMatrixFactory::createBufferImage(
-                w_size.first, w_size.second, Canvas::Constant::white
-            );
-            PiCanvas::blend(temp, img, 0, 0, 255);
-            gdi.paste(temp, 0, 0);
-        });
-        w.create(L"demo");
-    }
-    
+        OnClean();
+    });
+    w.create(L"demo");    
     return 0;
 }

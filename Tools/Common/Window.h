@@ -39,6 +39,7 @@ class Window
     // ret bool: indicate do exit or not
     std::function<bool()> onExit = [] { return true; };
 #ifdef _WIN32
+    // uint32_t message: A message id constant
     // ret bool: indicate whether any message handled
     std::function<bool(uint32_t, WPARAM, LPARAM)> onElse = [](uint32_t, WPARAM, LPARAM) { return false; };
 #endif /* _WIN32 */
@@ -84,7 +85,7 @@ public:
     }
 #endif /* _GTK */
     void refresh();
-    void alert(const std::wstring& str, uint32_t flag=0) const;
+    void alert(const std::wstring& str, const std::wstring& title, uint32_t flag=0) const;
     void setTitle(const std::wstring& str);
 
     // a pair (left, top)

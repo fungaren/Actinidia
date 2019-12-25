@@ -26,5 +26,6 @@
 #include <fstream>
 #include <filesystem>
 #include <thread>
+#include <map>
 
 #endif //PCH_H

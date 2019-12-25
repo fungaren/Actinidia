@@ -25,7 +25,7 @@ struct entity {
                         // do not support filesize > 4GB
 };
 
-bool generatePack(const std::wstring& destFile, const std::filesystem::path& resDirectory);
+bool generatePack(const std::string& destFile, const std::filesystem::path& resDirectory);
 bool extractPack(const std::filesystem::path& resFile);
 
 /*
@@ -40,11 +40,12 @@ bool extractPack(const std::filesystem::path& resFile);
 */
 
 class ResourcePack {
+    // All resources are load to memory, make sure enough capcity of the memory.
     struct ResourceFile {
-        std::wstring path;
+        std::string path;
         uint8_t* data;
         uint32_t dataSize;
-        ResourceFile(std::wstring path, uint8_t* data, uint32_t dataSize) :
+        ResourceFile(std::string path, uint8_t* data, uint32_t dataSize) :
             path(path),
             data(data),
             dataSize(dataSize)
@@ -53,12 +54,22 @@ class ResourcePack {
             _ASSERT(dataSize != 0);
         }
     };
+public:
     std::vector<ResourceFile> list;
     ResourcePack() {};
     ResourcePack(ResourcePack&) = delete;
-    ResourcePack(ResourcePack&& r) : list(r.list) {};
+    ResourcePack(ResourcePack&& r) : list(r.list) {
+        r.list.clear();
+    };
+    ~ResourcePack() {
+        for (auto& i : list)
+            delete i.data;
+    }
+    void operator=(ResourcePack&& r) {
+        list = r.list;
+        r.list.clear();
+    }
 
-public:
     // Open a package and construct a ResourcePack instance.
     // Will throw an exception for any error occurred.
     static ResourcePack parsePack(const std::filesystem::path& resFile) noexcept(false);
@@ -66,13 +77,13 @@ public:
     // Read a file by path, the file pointer and file size
     // will be stored in @p and @size. Return true if succuss.
     // the pathname should be like "./path/to/file.jpg"
-    bool readResource(std::wstring pathname, uint8_t** p, uint32_t* size) const;
+    bool readResource(std::string pathname, uint8_t** p, uint32_t* size) const;
     
     // Read a file by path, the file pointer and file size
     // will be stored in @p and @size. Return true if succuss.
     // the pathname should be like "./path/to/file.jpg"
-    bool readResource(std::wstring pathname, char** p, uint32_t* size) const {
+    bool readResource(std::string pathname, char** p, uint32_t* size) const {
         return readResource(pathname, (uint8_t**)p, size);
     }
-
+   
 };

@@ -34,7 +34,7 @@ void deployPack(const std::wstring& destFile, const path& resDirectory)
     disableButtons();
     if (task.joinable()) task.join();
     task = std::thread([=]() {
-        if (generatePack(destFile, resDirectory))
+        if (generatePack(path(destFile).u8string(), resDirectory))
             userClosed ? 0 : SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0,
             (LPARAM)L"The resource file was successfully generated.");
         else

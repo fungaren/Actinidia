@@ -7,7 +7,6 @@
 #include <string>
 #include <thread>
 #include <filesystem>
-#include <memory>
 */
 
 #include "ImageMatrix.h"
@@ -235,7 +234,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     }
     png_destroy_read_struct(&png_ptr, &info_ptr, 0);
 
-    return pImageMatrix(new ImageMatrix(table, w, h));
+    return new ImageMatrix(table, w, h);
 }
 
 void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const char* filePath)
@@ -599,7 +598,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     * so as to simplify the setjmp error logic above.  (Actually, I don't
     * think that jpeg_destroy can do an error exit, but why assume anything...)
     */
-    return pImageMatrix(new ImageMatrix(table, w, h));
+    return new ImageMatrix(table, w, h);
 }
 
 void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const char* filePath, uint8_t quality)

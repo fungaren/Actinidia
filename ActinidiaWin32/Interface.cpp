@@ -1,5 +1,6 @@
 #include "pch.h"
-
+#undef PlaySound 
+#include "../Tools/Common/Window.h"
 #include "../Tools/Common/Canvas.h"
 #include "../Tools/Common/ImageMatrix.h"
 #include "../Tools/Common/ResourcePack.h"
@@ -10,347 +11,334 @@ extern "C" {
 #include "bass/bass.h"
 #pragma comment(lib, "bass/bass.lib")
 
-// Global functions for lua
+#define MIN_WIDTH 200
+#define MIN_HEIGHT 100
+size_t WIN_WIDTH = 1024;
+size_t WIN_HEIGHT = 768;
+lua_State* L;
+extern ResourcePack pack;
+extern Window w;
+extern std::map<const std::string, std::string> user_data;
+
+//==============================================
+//=        Global functions for lua            =
+//==============================================
 
 // lua: Image CreateImage(width, height), Create Image with Black bg, must DeleteImage() in OnClose()
 int CreateImage(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 2) return 0;
-	int width = (int)lua_tointeger(L, 1);
-	int height = (int)lua_tointeger(L, 2);
-	lua_pop(L, 2);
-	auto g = ImageMatrixFactory::createBufferImage(width, height);
-	lua_pushinteger(L, (uint32_t)&*g);
-	return 1;
+    int n = lua_gettop(L);
+    if (n != 2) return 0;
+    int width = (int)lua_tointeger(L, 1);
+    int height = (int)lua_tointeger(L, 2);
+    lua_pop(L, 2);
+    auto g = ImageMatrixFactory::createBufferImage(width, height);
+    lua_pushinteger(L, (lua_Integer)g);
+    return 1;
 }
 
 // lua: Image CreateImageEx(width, height, color), Create Image with specific bg, must DeleteImage() in OnClose()
 int CreateImageEx(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 3) return 0;
-	int width = (int)lua_tointeger(L, 1);
-	int height = (int)lua_tointeger(L, 2);
-	auto c = lua_tointeger(L, 3);
-	lua_pop(L, 3);
-	auto g = ImageMatrixFactory::createBufferImage(width, height, Canvas::color(c));
-	lua_pushinteger(L, (uint32_t)&*g);
-	return 1;
+    int n = lua_gettop(L);
+    if (n != 3) return 0;
+    int width = (int)lua_tointeger(L, 1);
+    int height = (int)lua_tointeger(L, 2);
+    auto c = lua_tointeger(L, 3);
+    lua_pop(L, 3);
+    auto g = ImageMatrixFactory::createBufferImage(width, height, Canvas::color(c));
+    lua_pushinteger(L, (lua_Integer)g);
+    return 1;
 }
 
 // lua: Image CreateTransImage(width, height), Create Transparent Image, must DeleteImage() in OnClose()
 int CreateTransImage(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 2) return 0;
-	int width = (int)lua_tointeger(L, 1);
-	int height = (int)lua_tointeger(L, 2);
-	lua_pop(L, 2);
-	auto g = ImageMatrixFactory::createBufferImage(width, height, Canvas::Constant::alpha);
-	lua_pushinteger(L, (uint32_t)&*g);
-	return 1;
+    int n = lua_gettop(L);
+    if (n != 2) return 0;
+    int width = (int)lua_tointeger(L, 1);
+    int height = (int)lua_tointeger(L, 2);
+    lua_pop(L, 2);
+    auto g = ImageMatrixFactory::createBufferImage(width, height, Canvas::Constant::alpha);
+    lua_pushinteger(L, (lua_Integer)g);
+    return 1;
 }
 
 // lua: void DeleteImage(g)
 int DeleteImage(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 1) return 0;
-	auto g = (ImageMatrix*)lua_tointeger(L, 1);
-	lua_pop(L, 1);
-	delete g;
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 1) return 0;
+    auto g = (ImageMatrix*)lua_tointeger(L, 1);
+    lua_pop(L, 1);
+    delete g;
+    return 0;
 }
 
 // lua: int GetWidth(g)
 int GetWidth(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 1) return 0;
-	auto g = (ImageMatrix*)lua_tointeger(L, 1);
-	lua_pop(L, 1);
-	lua_pushinteger(L, g->getWidth());
-	return 1;
+    int n = lua_gettop(L);
+    if (n != 1) return 0;
+    auto g = (ImageMatrix*)lua_tointeger(L, 1);
+    lua_pop(L, 1);
+    lua_pushinteger(L, g->getWidth());
+    return 1;
 }
 
 // lua: int GetHeight(g)
 int GetHeight(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 1) return 0;
-	auto g = (ImageMatrix*)lua_tointeger(L, 1);
-	lua_pop(L, 1);
-	lua_pushinteger(L, g->getHeight());
-	return 1;
+    int n = lua_gettop(L);
+    if (n != 1) return 0;
+    auto g = (ImageMatrix*)lua_tointeger(L, 1);
+    lua_pop(L, 1);
+    lua_pushinteger(L, g->getHeight());
+    return 1;
 }
 
 // lua: string GetText(pathname)
 int GetText(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 1) return 0;
-	std::string f = lua_tostring(L, 1);
-	lua_pop(L, 1);
-	LPBYTE pMem;
-    long size;
-    // resources will be released in EmptyStack()
-	if (pack.readResource(f.c_str(), &pMem, &size))
-	{
-		lua_pushlstring(L, (char*)pMem, size);
-		return 1;
-	}
-	lua_pushnil(L);
-	return 1;
+    int n = lua_gettop(L);
+    if (n != 1) return 0;
+    std::string f = lua_tostring(L, 1);
+    lua_pop(L, 1);
+    char* p;
+    uint32_t size;
+    if (pack.readResource(f, &p, &size))
+    {
+        lua_pushlstring(L, (char*)p, size);
+        return 1;
+    }
+    lua_pushnil(L);
+    return 1;
 }
 
 // lua: image GetImage(pathname), must DeleteImage() in OnClose()
 int GetImage(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 1) return 0;
-	std::string f = lua_tostring(L, 1);
-	lua_pop(L, 1);
-	LPBYTE pMem;
-    long size;
-    // resources will be released in EmptyStack()
-	if (pack.readResource(f.c_str(), &pMem, &size))
-	{
+    int n = lua_gettop(L);
+    if (n != 1) return 0;
+    std::string f = lua_tostring(L, 1);
+    lua_pop(L, 1);
+    char* p;
+    uint32_t size;
+    if (pack.readResource(f, &p, &size))
+    {
         pImageMatrix g;
         try {
-            g = ImageMatrixFactory::fromJpegBuffer(pMem, size);
-            lua_pushinteger(L, (uint32_t)&*g);
+            g = ImageMatrixFactory::fromJpegBuffer(p, size);
+            lua_pushinteger(L, (lua_Integer)g);
             return 1;
         }
         catch (std::runtime_error e) {
             ;
         }
-	}
-	lua_pushnil(L);
-	return 1;
+    }
+    lua_pushnil(L);
+    return 1;
 }
 
 // lua: sound GetSound(pathname, b_loop), if b_loop set true, must StopSound() in OnClose()
 int GetSound(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 2) return 0;
-	std::string f = lua_tostring(L, 1);
-	int b_loop = lua_toboolean(L, 2);
-	lua_pop(L, 2);
-	LPBYTE pMem;
-    long size;
-    // resources will be released in EmptyStack()
-	if (pack.readResource(f.c_str(), &pMem, &size))
-	{
-		HSTREAM sound = BASS_StreamCreateFile(TRUE, pMem, 0, size,
-			b_loop ? BASS_SAMPLE_LOOP : 0);
-		if (sound)
-		{
-			lua_pushinteger(L, sound);
-			return 1;
-		}
-	}
-	lua_pushnil(L);
-	return 1;
-}
-
-// lua: void EmptyStack(), free memory manually, must DeleteImage() and StopSound() in advance.
-int EmptyStack(lua_State *L)
-{
-	for (unsigned long i = 0; i < iter; i++)
-		free(ResStack[i]);
-	iter = 0;
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 2) return 0;
+    std::string f = lua_tostring(L, 1);
+    int b_loop = lua_toboolean(L, 2);
+    lua_pop(L, 2);
+    char* p;
+    uint32_t size;
+    if (pack.readResource(f, &p, &size))
+    {
+        HSTREAM sound = BASS_StreamCreateFile(TRUE, p, 0, size,
+            b_loop ? BASS_SAMPLE_LOOP : 0);
+        if (sound)
+        {
+            lua_pushinteger(L, sound);
+            return 1;
+        }
+    }
+    lua_pushnil(L);
+    return 1;
 }
 
 // lua: void PasteToImage(gDest, gSrc, xDest, yDest)
 int PasteToImage(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 4) return 0;
-	auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
-	auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
-	int x = (int)lua_tointeger(L, 3);
-	int y = (int)lua_tointeger(L, 4);
-	lua_pop(L, 4);
-	gDest->PasteFrom(gSrc, x, y);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 4) return 0;
+    auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
+    auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
+    int x = (int)lua_tointeger(L, 3);
+    int y = (int)lua_tointeger(L, 4);
+    lua_pop(L, 4);
+    PiCanvas::blend(gDest, gSrc, x, y, 255);
+    return 0;
 }
 
 // lua: void PasteToImageEx(gDest, gSrc, xDest, yDest, DestWidth, DestHeight, xSrc, ySrc, SrcWidth, SrcHeight)
 int PasteToImageEx(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 10) return 0;
-	auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
-	auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
-	int xDest = (int)lua_tointeger(L, 3);
-	int yDest = (int)lua_tointeger(L, 4);
-	int DestWidth = (int)lua_tointeger(L, 5);
-	int DestHeight = (int)lua_tointeger(L, 6);
-	int xSrc = (int)lua_tointeger(L, 7);
-	int ySrc = (int)lua_tointeger(L, 8);
-	int SrcWidth = (int)lua_tointeger(L, 9);
-	int SrcHeight = (int)lua_tointeger(L, 10);
-	lua_pop(L, 10);
-	gDest->PasteFrom(gSrc, xDest, yDest, DestWidth, DestHeight,
-		xSrc, ySrc, SrcWidth, SrcHeight);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 10) return 0;
+    auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
+    auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
+    int xDest = (int)lua_tointeger(L, 3);
+    int yDest = (int)lua_tointeger(L, 4);
+    int DestWidth = (int)lua_tointeger(L, 5);
+    int DestHeight = (int)lua_tointeger(L, 6);
+    int xSrc = (int)lua_tointeger(L, 7);
+    int ySrc = (int)lua_tointeger(L, 8);
+    int SrcWidth = (int)lua_tointeger(L, 9);
+    int SrcHeight = (int)lua_tointeger(L, 10);
+    lua_pop(L, 10);
+    PiCanvas::blend(gDest, gSrc, xDest, yDest, DestWidth, DestHeight,
+        xSrc, ySrc, SrcWidth, SrcHeight, 255);
+    return 0;
 }
 
 // lua: void AlphaBlend(gDest, gSrc, xDest, yDest, SrcAlpha)
 int AlphaBlend(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 5) return 0;
-	auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
-	auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
-	int xDest = (int)lua_tointeger(L, 3);
-	int yDest = (int)lua_tointeger(L, 4);
-	unsigned char SrcAlpha = (unsigned char)lua_tointeger(L, 5);
-	lua_pop(L, 5);
-	gDest->BlendFrom(gSrc, xDest, yDest, SrcAlpha);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 5) return 0;
+    auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
+    auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
+    int xDest = (int)lua_tointeger(L, 3);
+    int yDest = (int)lua_tointeger(L, 4);
+    unsigned char SrcAlpha = (unsigned char)lua_tointeger(L, 5);
+    lua_pop(L, 5);
+    PiCanvas::blend(gDest, gSrc, xDest, yDest, SrcAlpha);
+    return 0;
 }
 
 // lua: void AlphaBlendEx(gDest, gSrc, xDest, yDest, DestWidth, DestHeight, xSrc, ySrc, SrcWidth, SrcHeight, SrcAlpha)
 int AlphaBlendEx(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 11) return 0;
-	auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
-	auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
-	int xDest = (int)lua_tointeger(L, 3);
-	int yDest = (int)lua_tointeger(L, 4);
-	int DestWidth = (int)lua_tointeger(L, 5);
-	int DestHeight = (int)lua_tointeger(L, 6);
-	int xSrc = (int)lua_tointeger(L, 7);
-	int ySrc = (int)lua_tointeger(L, 8);
-	int SrcWidth = (int)lua_tointeger(L, 9);
-	int SrcHeight = (int)lua_tointeger(L, 10);
-	unsigned char SrcAlpha = (unsigned char)lua_tointeger(L, 11);
-	lua_pop(L, 11);
-	gDest->BlendFrom(gSrc, xDest, yDest, DestWidth, DestHeight,
-		xSrc, ySrc, SrcWidth, SrcHeight, SrcAlpha);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 11) return 0;
+    auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
+    auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
+    int xDest = (int)lua_tointeger(L, 3);
+    int yDest = (int)lua_tointeger(L, 4);
+    int DestWidth = (int)lua_tointeger(L, 5);
+    int DestHeight = (int)lua_tointeger(L, 6);
+    int xSrc = (int)lua_tointeger(L, 7);
+    int ySrc = (int)lua_tointeger(L, 8);
+    int SrcWidth = (int)lua_tointeger(L, 9);
+    int SrcHeight = (int)lua_tointeger(L, 10);
+    unsigned char SrcAlpha = (unsigned char)lua_tointeger(L, 11);
+    lua_pop(L, 11);
+    PiCanvas::blend(gDest, gSrc, xDest, DestWidth, DestHeight,
+        xSrc, ySrc, SrcWidth, SrcHeight, yDest, SrcAlpha);
+    return 0;
 }
 
 // lua: void PasteToWnd(WndGraphic, g)
 int PasteToWnd(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 2) return 0;
-	auto w = (DeviceContextGraphic*)lua_tointeger(L, 1);
-	auto g = (ImageMatrix*)lua_tointeger(L, 2);
-	lua_pop(L, 2);
-	w->PasteFrom(g, 0, 0);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 2) return 0;
+    auto w = (GdiCanvas*)lua_tointeger(L, 1);
+    auto g = (ImageMatrix*)lua_tointeger(L, 2);
+    lua_pop(L, 2);
+    w->paste(g, 0, 0);
+    return 0;
 }
 
 // lua: void PasteToWndEx(WndGraphic, g, xDest, yDest, DestWidth, DestHeight, xSrc, ySrc, SrcWidth, SrcHeight)
 int PasteToWndEx(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 10) return 0;
-	auto w = (DeviceContextGraphic*)lua_tointeger(L, 1);
-	auto g = (ImageMatrix*)lua_tointeger(L, 2);
-	int xDest = (int)lua_tointeger(L, 3);
-	int yDest = (int)lua_tointeger(L, 4);
-	int DestWidth = (int)lua_tointeger(L, 5);
-	int DestHeight = (int)lua_tointeger(L, 6);
-	int xSrc = (int)lua_tointeger(L, 7);
-	int ySrc = (int)lua_tointeger(L, 8);
-	int SrcWidth = (int)lua_tointeger(L, 9);
-	int SrcHeight = (int)lua_tointeger(L, 10);
-	lua_pop(L, 10);
-	w->PasteFrom(g, xDest, yDest, DestWidth, DestHeight,
-		xSrc, ySrc, SrcWidth, SrcHeight);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 10) return 0;
+    auto w = (GdiCanvas*)lua_tointeger(L, 1);
+    auto g = (ImageMatrix*)lua_tointeger(L, 2);
+    int xDest = (int)lua_tointeger(L, 3);
+    int yDest = (int)lua_tointeger(L, 4);
+    int DestWidth = (int)lua_tointeger(L, 5);
+    int DestHeight = (int)lua_tointeger(L, 6);
+    int xSrc = (int)lua_tointeger(L, 7);
+    int ySrc = (int)lua_tointeger(L, 8);
+    int SrcWidth = (int)lua_tointeger(L, 9);
+    int SrcHeight = (int)lua_tointeger(L, 10);
+    lua_pop(L, 10);
+    w->paste(g, xDest, yDest, DestWidth, DestHeight,
+        xSrc, ySrc, SrcWidth, SrcHeight);
+    return 0;
 }
 
 // lua: void StopSound(sound)
 int StopSound(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 1) return 0;
-	HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
-	lua_pop(L, 1);
-	if (BASS_ACTIVE_PLAYING == BASS_ChannelIsActive(sound))
-		BASS_ChannelStop(sound);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 1) return 0;
+    HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
+    lua_pop(L, 1);
+    if (BASS_ACTIVE_PLAYING == BASS_ChannelIsActive(sound))
+        BASS_ChannelStop(sound);
+    return 0;
 }
 
 // lua: void SetVolume(sound,volume), volume: 0-1
 int SetVolume(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 2) return 0;
-	HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
-	float volume = (float)lua_tonumber(L, 2);
-	lua_pop(L, 2);
-	BASS_ChannelSetAttribute(sound, BASS_ATTRIB_VOL, volume);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 2) return 0;
+    HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
+    float volume = (float)lua_tonumber(L, 2);
+    lua_pop(L, 2);
+    BASS_ChannelSetAttribute(sound, BASS_ATTRIB_VOL, volume);
+    return 0;
 }
 
 // lua: void PlaySound(sound)
 int PlaySound(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 1) return 0;
-	HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
-	lua_pop(L, 1);
-	BASS_ChannelPlay(sound, true);
-	return 0;
+    int n = lua_gettop(L);
+    if (n != 1) return 0;
+    HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
+    lua_pop(L, 1);
+    BASS_ChannelPlay(sound, true);
+    return 0;
 }
 
-// lua: bool Screenshot(), true for success
+// lua: bool Screenshot(g), true for success
 int Screenshot(lua_State *L)
 {
-	int r = CreateDirectory(L"screenshot", NULL);
-	//if (r != 0 && r != ERROR_ALREADY_EXISTS)
-	//return false;
+    std::filesystem::create_directory("screenshot");
 
-	TCHAR szFileName[120];
+    SYSTEMTIME SysTime;
+    GetSystemTime(&SysTime);
+    static UINT n_png = 0;
+    
+    TCHAR szFileName[120];
+    swprintf_s(szFileName, L"screenshot\\%d-%d-%d-%d-%d-%d_%d.png",
+        SysTime.wYear, SysTime.wMonth, SysTime.wDay, SysTime.wHour, SysTime.wMinute, SysTime.wSecond, n_png++);
 
-	SYSTEMTIME SysTime;
-	GetSystemTime(&SysTime);
-	static UINT n_png = 0;
-	
-	swprintf_s(szFileName, L"screenshot\\%d-%d-%d-%d-%d-%d_%d.png",
-		SysTime.wYear, SysTime.wMonth, SysTime.wDay, SysTime.wHour, SysTime.wMinute, SysTime.wSecond, n_png++);
+    auto g = (ImageMatrix*)lua_tointeger(L, 1);
+    ImageMatrixFactory::dumpPngFile(g, szFileName);
 
-	HANDLE hFile;
-	hFile = CreateFile(szFileName, GENERIC_WRITE, 0,
-        NULL, CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-        NULL);
-	if (hFile == INVALID_HANDLE_VALUE)
-	{
-		lua_pushboolean(L, false);
-		return 1;
-	}
-
-
-	lua_pushboolean(L, true);
-	return 1;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // lua: string GetSetting(string key)
 int GetSetting(lua_State *L)
 {
-	int n = lua_gettop(L);
-	if (n != 1) return 0;
-	std::string key = lua_tostring(L, 1);
-	lua_pop(L, 1);
-	try {
-		std::string val = prop.at(key);	// at() will throw std::out_of_range if not exists
-		lua_pushlstring(L, val.c_str(), val.size());
-	}
-	catch (std::out_of_range oor) {
-		lua_pushnil(L);	
-	}
-	return 1;
+    int n = lua_gettop(L);
+    if (n != 1) return 0;
+    std::string key = lua_tostring(L, 1);
+    lua_pop(L, 1);
+    try {
+        std::string val = user_data.at(key);    // at() will throw std::out_of_range if not exists
+        lua_pushlstring(L, val.c_str(), val.size());
+    }
+    catch (std::out_of_range oor) {
+        lua_pushnil(L);    
+    }
+    return 1;
 }
 
 // lua: void SaveSetting(string key, string value)
@@ -360,7 +348,164 @@ int SaveSetting(lua_State *L)
     if (n != 2) return 0;
     std::string key = lua_tostring(L, 1);
     std::string val = lua_tostring(L, 2);
-    prop[key] = val;
+    user_data[key] = val;
     lua_pop(L, 2);
     return 0;
+}
+
+//==============================================
+//=                  Callback                  =
+//==============================================
+
+bool OnInit()
+{
+    BASS_Init(-1, 44100, 0, 0, 0);
+
+    L = lua_newstate();
+    luaL_openlibs(L);
+
+    lua_register(L, "CreateImage", CreateImage);
+    lua_register(L, "CreateImageEx", CreateImageEx);
+    lua_register(L, "CreateTransImage", CreateTransImage);
+    lua_register(L, "DeleteImage", DeleteImage);
+    lua_register(L, "GetWidth", GetWidth);
+    lua_register(L, "GetHeight", GetHeight);
+    lua_register(L, "GetText", GetText);
+    lua_register(L, "GetImage", GetImage);
+    lua_register(L, "GetSound", GetSound);
+    lua_register(L, "PasteToImage", PasteToImage);
+    lua_register(L, "PasteToImageEx", PasteToImageEx);
+    lua_register(L, "AlphaBlend", AlphaBlend);
+    lua_register(L, "AlphaBlendEx", AlphaBlendEx);
+    lua_register(L, "PasteToWnd", PasteToWnd);
+    lua_register(L, "PasteToWndEx", PasteToWndEx);
+    lua_register(L, "StopSound", StopSound);
+    lua_register(L, "SetVolume", SetVolume);
+    lua_register(L, "PlaySound", PlaySound);
+    lua_register(L, "Screenshot", Screenshot);
+    lua_register(L, "GetSetting", GetSetting);
+    lua_register(L, "SaveSetting", SaveSetting);
+
+    char* p;
+    uint32_t size;
+    if (pack.readResource("./game/config.ini", &p, &size)) // Load configure
+    {
+        std::string conf_str(p, size);
+        conf_str += '\n';
+
+        // Get client size
+        size_t result = conf_str.find("preferred_width", 0);
+        if (result != std::string::npos) {
+            size_t w_begin = 1 + conf_str.find('=', result);
+            size_t w_end = conf_str.find('\n', w_begin);
+            result = std::stoi(conf_str.substr(w_begin, w_end - w_begin));
+            if (result > MIN_WIDTH) WIN_WIDTH = result;
+        }
+        result = conf_str.find("preferred_height", 0);
+        if (result != std::string::npos) {
+            size_t w_begin = 1 + conf_str.find('=', result);
+            size_t w_end = conf_str.find('\n', w_begin);
+            result = std::stoi(conf_str.substr(w_begin, w_end - w_begin));
+            if (result > MIN_HEIGHT) WIN_HEIGHT = result;
+        }
+    }
+
+    // Load scripts & set screen size
+    if (pack.readResource("./game/lua/main.lua", &p, &size) &&
+        luaL_loadbuffer(L, p, size, "line") == 0 &&
+        lua_pcall(L, 0, LUA_MULTRET, 0) == 0)
+    {
+        lua_getglobal(L, "core");
+        lua_pushinteger(L, WIN_WIDTH);
+        lua_setfield(L, -2, "screenwidth");
+        lua_getglobal(L, "core");
+        lua_pushinteger(L, WIN_HEIGHT);
+        lua_setfield(L, -2, "screenheight");
+        return true;
+    }
+    else
+    {
+        w.alert(L"Fail to load main script!", L"Error", MB_ICONERROR);
+        return false;
+    }
+}
+
+void OnClean()
+{
+    BASS_Free();
+    lua_close(L);
+}
+
+// lua: void OnSetFocus()
+void OnSetFocus() {
+    lua_getglobal(L, "OnSetFocus");
+    lua_pcall(L, 0, 0, 0);
+}
+
+// lua: void OnKillFocus()
+void OnKillFocus() {
+    lua_getglobal(L, "OnKillFocus");
+    lua_pcall(L, 0, 0, 0);
+}
+
+// lua: void OnPaint(WndGraphic)
+void OnPaint(const GdiCanvas& gdi)
+{
+    lua_getglobal(L, "OnPaint");
+    lua_pushinteger(L, (lua_Integer)&gdi);
+    lua_pcall(L, 1, 0, 0);
+}
+
+// lua: void OnClose()
+void OnClose() {
+    lua_getglobal(L, "OnClose");
+    lua_pcall(L, 0, 0, 0);
+}
+
+// lua: void OnKeyDown(int key)
+void OnKeyDown(int key) {
+    lua_getglobal(L, "OnKeyDown");
+    lua_pushinteger(L, key);
+    lua_pcall(L, 1, 0, 0);
+}
+
+// lua: void OnKeyUp(int key)
+void OnKeyUp(int key) {
+    lua_getglobal(L, "OnKeyUp");
+    lua_pushinteger(L, key);
+    lua_pcall(L, 1, 0, 0);
+}
+
+// lua: void OnLButtonDown(int x,int y)
+void OnLButtonDown(uint32_t, int x, int y) {
+    lua_getglobal(L, "OnLButtonDown");
+    lua_pushinteger(L, x);
+    lua_pushinteger(L, y);
+    lua_pcall(L, 2, 0, 0);
+}
+
+// lua: void OnLButtonUP(int x,int y)
+void OnLButtonUp(uint32_t, int x, int y) {
+    lua_getglobal(L, "OnLButtonUp");
+    lua_pushinteger(L, x);
+    lua_pushinteger(L, y);
+    lua_pcall(L, 2, 0, 0);
+}
+
+// lua: void OnMouseMove(int x,int y)
+void OnMouseMove(uint32_t, int x, int y) {
+    lua_getglobal(L, "OnMouseMove");
+    lua_pushinteger(L, x);
+    lua_pushinteger(L, y);
+    lua_pcall(L, 2, 0, 0);
+}
+
+// lua: void OnMouseWheel(int zDeta, int x, int y)
+void OnMouseWheel(uint32_t, short zDelta, int x, int y) {
+    lua_getglobal(L, "OnMouseWheel");
+    lua_pushinteger(L, zDelta);
+    auto location = w.getPos();
+    lua_pushinteger(L, x - location.first);
+    lua_pushinteger(L, y - location.second);
+    lua_pcall(L, 3, 0, 0);
 }

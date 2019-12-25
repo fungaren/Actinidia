@@ -44,5 +44,8 @@
     <ClCompile Include="..\Tools\Common\Window.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="Interface.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

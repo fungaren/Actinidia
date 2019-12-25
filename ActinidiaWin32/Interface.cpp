@@ -1,14 +1,14 @@
-#include "ActinidiaGo.h"
-#include "bass\\bass.h"
-#pragma comment(lib, "bass\\bass.lib")
-#include "ActinidiaResLoader.h"
+#include "pch.h"
 
-HINSTANCE hInst = NULL;
-HWND hwnd;
-#define MIN_WIDTH 200
-#define MIN_HEIGHT 100
-int WIN_WIDTH = 1024;
-int WIN_HEIGHT = 768;
+#include "../Tools/Common/Canvas.h"
+#include "../Tools/Common/ImageMatrix.h"
+#include "../Tools/Common/ResourcePack.h"
+extern "C" {
+#include "lua/lua.h"
+}
+#pragma comment(lib, "lua/lua.lib")
+#include "bass/bass.h"
+#pragma comment(lib, "bass/bass.lib")
 
 // Global functions for lua
 
@@ -20,8 +20,8 @@ int CreateImage(lua_State *L)
 	int width = (int)lua_tointeger(L, 1);
 	int height = (int)lua_tointeger(L, 2);
 	lua_pop(L, 2);
-	auto g = new ImageGraphic(width, height);
-	lua_pushinteger(L, (DWORD)g);
+	auto g = ImageMatrixFactory::createBufferImage(width, height);
+	lua_pushinteger(L, (uint32_t)&*g);
 	return 1;
 }
 
@@ -34,8 +34,8 @@ int CreateImageEx(lua_State *L)
 	int height = (int)lua_tointeger(L, 2);
 	auto c = lua_tointeger(L, 3);
 	lua_pop(L, 3);
-	auto g = new ImageGraphic(width, height, (color)c);
-	lua_pushinteger(L, (DWORD)g);
+	auto g = ImageMatrixFactory::createBufferImage(width, height, Canvas::color(c));
+	lua_pushinteger(L, (uint32_t)&*g);
 	return 1;
 }
 
@@ -47,8 +47,8 @@ int CreateTransImage(lua_State *L)
 	int width = (int)lua_tointeger(L, 1);
 	int height = (int)lua_tointeger(L, 2);
 	lua_pop(L, 2);
-	auto g = new ImageGraphic(width, height, true);
-	lua_pushinteger(L, (DWORD)g);
+	auto g = ImageMatrixFactory::createBufferImage(width, height, Canvas::Constant::alpha);
+	lua_pushinteger(L, (uint32_t)&*g);
 	return 1;
 }
 
@@ -57,7 +57,7 @@ int DeleteImage(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 1) return 0;
-	auto g = (ImageGraphic*)(DWORD)lua_tointeger(L, 1);
+	auto g = (ImageMatrix*)lua_tointeger(L, 1);
 	lua_pop(L, 1);
 	delete g;
 	return 0;
@@ -68,9 +68,9 @@ int GetWidth(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 1) return 0;
-	auto g = (ImageGraphic*)(DWORD)lua_tointeger(L, 1);
+	auto g = (ImageMatrix*)lua_tointeger(L, 1);
 	lua_pop(L, 1);
-	lua_pushinteger(L, g->GetWidth());
+	lua_pushinteger(L, g->getWidth());
 	return 1;
 }
 
@@ -79,9 +79,9 @@ int GetHeight(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 1) return 0;
-	auto g = (ImageGraphic*)(DWORD)lua_tointeger(L, 1);
+	auto g = (ImageMatrix*)lua_tointeger(L, 1);
 	lua_pop(L, 1);
-	lua_pushinteger(L, g->GetHeight());
+	lua_pushinteger(L, g->getHeight());
 	return 1;
 }
 
@@ -93,8 +93,9 @@ int GetText(lua_State *L)
 	std::string f = lua_tostring(L, 1);
 	lua_pop(L, 1);
 	LPBYTE pMem;
-	long size = GetFile(f.c_str(), &pMem);	// resources will be released in EmptyStack()
-	if (size > 0)
+    long size;
+    // resources will be released in EmptyStack()
+	if (pack.readResource(f.c_str(), &pMem, &size))
 	{
 		lua_pushlstring(L, (char*)pMem, size);
 		return 1;
@@ -111,15 +112,19 @@ int GetImage(lua_State *L)
 	std::string f = lua_tostring(L, 1);
 	lua_pop(L, 1);
 	LPBYTE pMem;
-	long size = GetFile(f.c_str(), &pMem);	// resources will be released in EmptyStack()
-	if (size > 0)
+    long size;
+    // resources will be released in EmptyStack()
+	if (pack.readResource(f.c_str(), &pMem, &size))
 	{
-		auto g = new ImageGraphic();
-		if (g->LoadImg(pMem, size))
-		{
-			lua_pushinteger(L, (DWORD)g);
-			return 1;
-		}
+        pImageMatrix g;
+        try {
+            g = ImageMatrixFactory::fromJpegBuffer(pMem, size);
+            lua_pushinteger(L, (uint32_t)&*g);
+            return 1;
+        }
+        catch (std::runtime_error e) {
+            ;
+        }
 	}
 	lua_pushnil(L);
 	return 1;
@@ -134,8 +139,9 @@ int GetSound(lua_State *L)
 	int b_loop = lua_toboolean(L, 2);
 	lua_pop(L, 2);
 	LPBYTE pMem;
-	long size = GetFile(f.c_str(), &pMem);	// resources will be released in EmptyStack()
-	if (size > 0)
+    long size;
+    // resources will be released in EmptyStack()
+	if (pack.readResource(f.c_str(), &pMem, &size))
 	{
 		HSTREAM sound = BASS_StreamCreateFile(TRUE, pMem, 0, size,
 			b_loop ? BASS_SAMPLE_LOOP : 0);
@@ -163,8 +169,8 @@ int PasteToImage(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 4) return 0;
-	auto gDest = (ImageGraphic*)(DWORD)lua_tointeger(L, 1);
-	auto gSrc = (ImageGraphic*)(DWORD)lua_tointeger(L, 2);
+	auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
+	auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
 	int x = (int)lua_tointeger(L, 3);
 	int y = (int)lua_tointeger(L, 4);
 	lua_pop(L, 4);
@@ -177,8 +183,8 @@ int PasteToImageEx(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 10) return 0;
-	auto gDest = (ImageGraphic*)(DWORD)lua_tointeger(L, 1);
-	auto gSrc = (ImageGraphic*)(DWORD)lua_tointeger(L, 2);
+	auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
+	auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
 	int xDest = (int)lua_tointeger(L, 3);
 	int yDest = (int)lua_tointeger(L, 4);
 	int DestWidth = (int)lua_tointeger(L, 5);
@@ -198,8 +204,8 @@ int AlphaBlend(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 5) return 0;
-	auto gDest = (ImageGraphic*)(DWORD)lua_tointeger(L, 1);
-	auto gSrc = (ImageGraphic*)(DWORD)lua_tointeger(L, 2);
+	auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
+	auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
 	int xDest = (int)lua_tointeger(L, 3);
 	int yDest = (int)lua_tointeger(L, 4);
 	unsigned char SrcAlpha = (unsigned char)lua_tointeger(L, 5);
@@ -213,8 +219,8 @@ int AlphaBlendEx(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 11) return 0;
-	auto gDest = (ImageGraphic*)(DWORD)lua_tointeger(L, 1);
-	auto gSrc = (ImageGraphic*)(DWORD)lua_tointeger(L, 2);
+	auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
+	auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
 	int xDest = (int)lua_tointeger(L, 3);
 	int yDest = (int)lua_tointeger(L, 4);
 	int DestWidth = (int)lua_tointeger(L, 5);
@@ -235,8 +241,8 @@ int PasteToWnd(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 2) return 0;
-	auto w = (DeviceContextGraphic*)(DWORD)lua_tointeger(L, 1);
-	auto g = (ImageGraphic*)(DWORD)lua_tointeger(L, 2);
+	auto w = (DeviceContextGraphic*)lua_tointeger(L, 1);
+	auto g = (ImageMatrix*)lua_tointeger(L, 2);
 	lua_pop(L, 2);
 	w->PasteFrom(g, 0, 0);
 	return 0;
@@ -247,8 +253,8 @@ int PasteToWndEx(lua_State *L)
 {
 	int n = lua_gettop(L);
 	if (n != 10) return 0;
-	auto w = (DeviceContextGraphic*)(DWORD)lua_tointeger(L, 1);
-	auto g = (ImageGraphic*)(DWORD)lua_tointeger(L, 2);
+	auto w = (DeviceContextGraphic*)lua_tointeger(L, 1);
+	auto g = (ImageMatrix*)lua_tointeger(L, 2);
 	int xDest = (int)lua_tointeger(L, 3);
 	int yDest = (int)lua_tointeger(L, 4);
 	int DestWidth = (int)lua_tointeger(L, 5);
@@ -301,7 +307,7 @@ int PlaySound(lua_State *L)
 // lua: bool Screenshot(), true for success
 int Screenshot(lua_State *L)
 {
-	int r = CreateDirectory(_T("screenshot"), NULL);
+	int r = CreateDirectory(L"screenshot", NULL);
 	//if (r != 0 && r != ERROR_ALREADY_EXISTS)
 	//return false;
 
@@ -311,58 +317,20 @@ int Screenshot(lua_State *L)
 	GetSystemTime(&SysTime);
 	static UINT n_png = 0;
 	
-	swprintf_s(szFileName, _T("screenshot\\%d-%d-%d-%d-%d-%d_%d.png"),
+	swprintf_s(szFileName, L"screenshot\\%d-%d-%d-%d-%d-%d_%d.png",
 		SysTime.wYear, SysTime.wMonth, SysTime.wDay, SysTime.wHour, SysTime.wMinute, SysTime.wSecond, n_png++);
 
 	HANDLE hFile;
-	hFile = CreateFile(szFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+	hFile = CreateFile(szFileName, GENERIC_WRITE, 0,
+        NULL, CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+        NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
 		lua_pushboolean(L, false);
 		return 1;
 	}
 
-	HDC hdc = GetDC(hwnd);
-	HDC tdc = CreateCompatibleDC(hdc);
-	HBITMAP hbmp = CreateCompatibleBitmap(hdc, WIN_WIDTH, WIN_HEIGHT);
-	HBITMAP hobmp = (HBITMAP)SelectObject(tdc, hbmp);
-	BitBlt(tdc, 0, 0, WIN_WIDTH, WIN_HEIGHT, hdc, 0, 0, SRCCOPY);
-	ReleaseDC(hwnd, hdc);
-	DeleteObject(hobmp);
-	DeleteDC(tdc);
-
-	BITMAPFILEHEADER fileHead;
-	int fileHeadLen = sizeof(BITMAPFILEHEADER);
-	BITMAPINFOHEADER bmpHead;
-	int bmpHeadLen = sizeof(BITMAPINFOHEADER);
-	BITMAP bmpObj;
-	GetObject(hbmp, sizeof(BITMAP), &bmpObj);
-	DWORD fileSizeInByte;
-	DWORD PixelSizeInBit;
-	HDC srcDC = CreateDC(_T("DISPLAY"), NULL, NULL, NULL);
-	PixelSizeInBit = GetDeviceCaps(srcDC, BITSPIXEL) * GetDeviceCaps(srcDC, PLANES);
-	fileSizeInByte = fileHeadLen + bmpHeadLen + bmpObj.bmWidth*bmpObj.bmHeight*PixelSizeInBit / 8;
-	fileHead.bfOffBits = fileHeadLen + bmpHeadLen;
-	fileHead.bfReserved1 = 0;
-	fileHead.bfReserved2 = 0;
-	fileHead.bfSize = fileSizeInByte;
-	fileHead.bfType = 0x4D42;
-	bmpHead.biBitCount = (WORD)PixelSizeInBit;
-	bmpHead.biCompression = BI_RGB;
-	bmpHead.biPlanes = 1;
-	bmpHead.biHeight = bmpObj.bmHeight;
-	bmpHead.biWidth = bmpObj.bmWidth;
-	bmpHead.biSize = bmpHeadLen;
-	PBYTE pFile = new byte[fileSizeInByte];
-	memset(pFile, 0, fileSizeInByte);
-	memcpy(pFile, (PBYTE)&fileHead, fileHeadLen);
-	memcpy(pFile + fileHeadLen, (PBYTE)&bmpHead, bmpHeadLen);
-	GetDIBits(srcDC, hbmp, 0, bmpObj.bmHeight, pFile + fileHeadLen + bmpHeadLen, (LPBITMAPINFO)(pFile + fileHeadLen), DIB_RGB_COLORS);
-	DWORD nByteTransfered;
-	WriteFile(hFile, pFile, fileSizeInByte, &nByteTransfered, NULL);
-	CloseHandle(hFile);
-	delete pFile;
-	DeleteDC(srcDC);
 
 	lua_pushboolean(L, true);
 	return 1;

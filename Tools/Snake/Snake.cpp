@@ -35,10 +35,10 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
     auto& size = w.getSize();
     if (GameState == State::Welcome)
     {
-        ImageMatrix temp = ImageMatrixFactory::createBufferImage(size.first, size.second, BACKGROUNDCOLOR);
-        ImageMatrix welcome = ImageMatrixFactory::fromPngResource(IDB_WELCOME, L"PNG", hInst);
-        PiCanvas::blend(temp, welcome, (size.first - welcome.getWidth()) / 2, (size.second - welcome.getHeight()) / 2,
-            welcome.getWidth(), welcome.getHeight(), 0, 0, welcome.getWidth(), welcome.getHeight(), 255);
+        auto temp = ImageMatrixFactory::createBufferImage(size.first, size.second, BACKGROUNDCOLOR);
+        auto welcome = ImageMatrixFactory::fromPngResource(IDB_WELCOME, L"PNG", hInst);
+        PiCanvas::blend(temp, welcome, (size.first - welcome->getWidth()) / 2, (size.second - welcome->getHeight()) / 2,
+            welcome->getWidth(), welcome->getHeight(), 0, 0, welcome->getWidth(), welcome->getHeight(), 255);
         gdi.paste(temp, 0, 0);
         return;
     }
@@ -48,7 +48,7 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
     CountEdgeWidth(size);    // 重新计算边宽
 
     // 清空屏幕 设置背景颜色
-    ImageMatrix img = ImageMatrixFactory::createBufferImage(size.first, size.second, BACKGROUNDCOLOR);
+    auto img = ImageMatrixFactory::createBufferImage(size.first, size.second, BACKGROUNDCOLOR);
 
     DrawBoard(img, size);    // 绘制棋盘
     DrawSnake(img);          // 绘制蛇
@@ -139,9 +139,9 @@ void SnakeView::SetFood()
 }
 
 // 绘制食物
-void SnakeView::DrawFood(ImageMatrix& img)
+void SnakeView::DrawFood(pImageMatrix img)
 {
-    ImageMatrix food;
+    pImageMatrix food;
     try {
         food = ImageMatrixFactory::fromPngResource(IDB_FOOD, L"PNG", hInst);
     }
@@ -155,12 +155,12 @@ void SnakeView::DrawFood(ImageMatrix& img)
         EdgeWidth * (FoodPosY - 1) + FoodPosY - FOODSIZE,
         EdgeWidth + 2 * (FOODSIZE),
         EdgeWidth + 2 * (FOODSIZE),
-        0, 0, food.getWidth(), food.getHeight(), 255
+        0, 0, food->getWidth(), food->getHeight(), 255
     );
 }
 
 // 绘制棋盘
-void SnakeView::DrawBoard(ImageMatrix& img, Size& size)
+void SnakeView::DrawBoard(pImageMatrix img, Size& size)
 {
     HPEN pen = CreatePen(PS_SOLID, 1, LINECOLOR);   // 边框
 
@@ -199,7 +199,7 @@ int SnakeView::GamePoint()
 }
 
 // 根据Board进行蛇的绘制
-void SnakeView::DrawSnake(ImageMatrix& img)
+void SnakeView::DrawSnake(pImageMatrix img)
 {
     int t = 1;              // 计数
     int x = HeadPosX;       // 当前位置的坐标值

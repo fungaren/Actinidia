@@ -2,7 +2,7 @@
 #include "../Tools/Common/Window.h"
 #include "../Tools/Common/ResourcePack.h"
 
-static ImageMatrix img;
+std::shared_ptr<ImageMatrix> img;
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR    lpCmdLine,
@@ -20,7 +20,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         img = ImageMatrixFactory::fromPngBuffer(p, size);
         w.setPaintHandler([](const GdiCanvas& gdi) {
             auto w_size = w.getSize();
-            ImageMatrix temp = ImageMatrixFactory::createBufferImage(
+            auto temp = ImageMatrixFactory::createBufferImage(
                 w_size.first, w_size.second, Canvas::Constant::white
             );
             PiCanvas::blend(temp, img, 0, 0, 255);

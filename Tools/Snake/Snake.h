@@ -69,11 +69,11 @@ public:
     // 随机放置食物
     void SetFood();
     // 绘制食物
-    void DrawFood(ImageMatrix& img);
+    void DrawFood(pImageMatrix img);
     // 绘制棋盘
-    void DrawBoard(ImageMatrix& img, Size& size);
+    void DrawBoard(pImageMatrix img, Size& size);
     // 根据Board进行蛇的绘制
-    void DrawSnake(ImageMatrix& img);
+    void DrawSnake(pImageMatrix img);
     // 计算边宽
     void CountEdgeWidth(const std::pair<int, int>& size);
     // 根据Board及Direction进行蛇运动的计算
@@ -97,7 +97,7 @@ public:
 };
 
 // 绘制向上的头
-inline void DrawHeadToUp(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::color color) {
+inline void DrawHeadToUp(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::color color) {
     PlatformIndependenceCanvas::fillSolidRect(
         img, 
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
@@ -109,7 +109,7 @@ inline void DrawHeadToUp(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::
 }
 
 // 绘制向下的头
-inline void DrawHeadToDown(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::color color) {
+inline void DrawHeadToDown(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::color color) {
     PlatformIndependenceCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
@@ -121,7 +121,7 @@ inline void DrawHeadToDown(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas
 }
 
 // 绘制向左的头
-inline void DrawHeadToLeft(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::color color) {
+inline void DrawHeadToLeft(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::color color) {
     PlatformIndependenceCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
@@ -133,7 +133,7 @@ inline void DrawHeadToLeft(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas
 }
 
 // 绘制向右的头
-inline void DrawHeadToRight(ImageMatrix& img, int EdgeWidth, int x, int y, Canvas::color color) {
+inline void DrawHeadToRight(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::color color) {
     PlatformIndependenceCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x - 1,

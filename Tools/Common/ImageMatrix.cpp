@@ -7,6 +7,7 @@
 #include <string>
 #include <thread>
 #include <filesystem>
+#include <memory>
 */
 
 #include "ImageMatrix.h"
@@ -14,7 +15,7 @@
 #pragma comment(lib, "zlib/zlibstatic.lib")
 #pragma comment(lib, "libjpeg/turbojpeg-static.lib")
 
-ImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t height, uint32_t bkgrdColor)
+pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t height, uint32_t bkgrdColor)
 {
     if (width == 0 || height == 0)
         throw std::invalid_argument("width and height cannot be zero");
@@ -39,16 +40,16 @@ ImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t heigh
         for (uint16_t x = 0; x < width; ++x)
             table[y][x] = bkgrdColor;
     }
-    return ImageMatrix(table, width, height);
+    return pImageMatrix(new ImageMatrix(table, width, height));
 }
 
-ImageMatrix ImageMatrixFactory::fromPngFile(const char* pngFile)
+pImageMatrix ImageMatrixFactory::fromPngFile(const char* pngFile)
 {
     FILE *fp;
     if (fopen_s(&fp, pngFile, "rb"))
         throw std::runtime_error("Failed to open file");
     try {
-        ImageMatrix im = fromPngFile(fp);
+        pImageMatrix im = fromPngFile(fp);
         fclose(fp);
         return im;
     }
@@ -58,13 +59,13 @@ ImageMatrix ImageMatrixFactory::fromPngFile(const char* pngFile)
     }
 }
 
-ImageMatrix ImageMatrixFactory::fromPngFile(const wchar_t* pngFile)
+pImageMatrix ImageMatrixFactory::fromPngFile(const wchar_t* pngFile)
 {
     FILE *fp;
     if (_wfopen_s(&fp, pngFile, L"rb"))
         throw std::runtime_error("Failed to open file");
     try {
-        ImageMatrix im = fromPngFile(fp);
+        pImageMatrix im = fromPngFile(fp);
         fclose(fp);
         return im;
     }
@@ -74,7 +75,7 @@ ImageMatrix ImageMatrixFactory::fromPngFile(const wchar_t* pngFile)
     }
 }
 
-ImageMatrix ImageMatrixFactory::fromPngFile(FILE *fp)
+pImageMatrix ImageMatrixFactory::fromPngFile(FILE *fp)
 {
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
     png_infop info_ptr = png_create_info_struct(png_ptr);
@@ -102,7 +103,7 @@ ImageMatrix ImageMatrixFactory::fromPngFile(FILE *fp)
     return readPngImpl(png_ptr, info_ptr);
 }
 
-ImageMatrix ImageMatrixFactory::fromPngBuffer(mem_image* mp)
+pImageMatrix ImageMatrixFactory::fromPngBuffer(mem_image* mp)
 {
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
     png_infop info_ptr = png_create_info_struct(png_ptr);
@@ -130,7 +131,7 @@ ImageMatrix ImageMatrixFactory::fromPngBuffer(mem_image* mp)
 }
 
 #ifdef _WIN32
-ImageMatrix ImageMatrixFactory::fromPngResource(UINT nResID, LPCTSTR lpType, HMODULE hModule)
+pImageMatrix ImageMatrixFactory::fromPngResource(UINT nResID, LPCTSTR lpType, HMODULE hModule)
 {
     HRSRC hRsrc = FindResource(hModule, MAKEINTRESOURCE(nResID), lpType);
     if (hRsrc == NULL)
@@ -145,7 +146,7 @@ ImageMatrix ImageMatrixFactory::fromPngResource(UINT nResID, LPCTSTR lpType, HMO
 
     auto mp = ImageMatrixFactory::mem_image(lpVoid, dwSize);
     try {
-        ImageMatrix im = fromPngBuffer(&mp);
+        pImageMatrix im = fromPngBuffer(&mp);
         UnlockResource(hImgData);
         FreeResource(hImgData);
         return im;
@@ -165,7 +166,7 @@ void ImageMatrixFactory::png_read_data_fn(png_structp png_ptr, png_bytep dest, p
     mp->has_read += length;
 }
 
-ImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info_ptr)
+pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info_ptr)
 {
     // Read PNG info
     png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_EXPAND, 0);
@@ -234,10 +235,10 @@ ImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info_
     }
     png_destroy_read_struct(&png_ptr, &info_ptr, 0);
 
-    return ImageMatrix(table, w, h);
+    return pImageMatrix(new ImageMatrix(table, w, h));
 }
 
-void ImageMatrixFactory::dumpPngFile(const ImageMatrix& im, const char* filePath)
+void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const char* filePath)
 {
     FILE *fp;
     if (fopen_s(&fp, filePath, "wb"))
@@ -252,7 +253,7 @@ void ImageMatrixFactory::dumpPngFile(const ImageMatrix& im, const char* filePath
     }
 }
 
-void ImageMatrixFactory::dumpPngFile(const ImageMatrix& im, const wchar_t* filePath)
+void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const wchar_t* filePath)
 {
     FILE *fp;
     if (_wfopen_s(&fp, filePath, L"wb"))
@@ -267,7 +268,7 @@ void ImageMatrixFactory::dumpPngFile(const ImageMatrix& im, const wchar_t* fileP
     }
 }
 
-void ImageMatrixFactory::dumpPngFile(const ImageMatrix& im, FILE *fp)
+void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, FILE *fp)
 {
     png_structp png_ptr;
     png_infop info_ptr;
@@ -322,7 +323,7 @@ void ImageMatrixFactory::dumpPngFile(const ImageMatrix& im, FILE *fp)
      * currently be PNG_COMPRESSION_TYPE_BASE and PNG_FILTER_TYPE_BASE.
      * REQUIRED.
      */
-    png_set_IHDR(png_ptr, info_ptr, im.getWidth(), im.getHeight(), 8,
+    png_set_IHDR(png_ptr, info_ptr, im->getWidth(), im->getHeight(), 8,
         PNG_COLOR_TYPE_RGBA , PNG_INTERLACE_NONE,
         PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
@@ -333,7 +334,7 @@ void ImageMatrixFactory::dumpPngFile(const ImageMatrix& im, FILE *fp)
     /* Flip BGR pixels to RGB. */
     png_set_bgr(png_ptr);
 
-    png_set_rows(png_ptr, info_ptr, (png_bytepp)im.getMatrix());
+    png_set_rows(png_ptr, info_ptr, (png_bytepp)im->getMatrix());
 
     /* Set the palette if there is one.  REQUIRED for indexed-color images. */
     //palette = (png_colorp)png_malloc(png_ptr,
@@ -370,13 +371,13 @@ void ImageMatrixFactory::dumpPngFile(const ImageMatrix& im, FILE *fp)
     png_destroy_write_struct(&png_ptr, &info_ptr);
 }
 
-ImageMatrix ImageMatrixFactory::fromJpegFile(const char* jpegFile)
+pImageMatrix ImageMatrixFactory::fromJpegFile(const char* jpegFile)
 {
     FILE *fp;
     if (fopen_s(&fp, jpegFile, "rb"))
         throw std::runtime_error("Failed to open file");
     try {
-        ImageMatrix im = fromJpegFile(fp);
+        pImageMatrix im = fromJpegFile(fp);
         fclose(fp);
         return im;
     }
@@ -387,13 +388,13 @@ ImageMatrix ImageMatrixFactory::fromJpegFile(const char* jpegFile)
 }
 
 
-ImageMatrix ImageMatrixFactory::fromJpegFile(const wchar_t* jpegFile) 
+pImageMatrix ImageMatrixFactory::fromJpegFile(const wchar_t* jpegFile)
 {
     FILE *fp;
     if (_wfopen_s(&fp, jpegFile, L"rb"))
         throw std::runtime_error("Failed to open file");
     try {
-        ImageMatrix im = fromJpegFile(fp);
+        pImageMatrix im = fromJpegFile(fp);
         fclose(fp);
         return im;
     }
@@ -410,7 +411,7 @@ void ImageMatrixFactory::jpeg_error_exit(j_common_ptr cinfo) {
 }
 
 
-ImageMatrix ImageMatrixFactory::fromJpegFile(FILE *fp)
+pImageMatrix ImageMatrixFactory::fromJpegFile(FILE *fp)
 {
     jpeg_decompress_struct cinfo;
     _jpeg_error_mgr jerr;
@@ -435,7 +436,7 @@ ImageMatrix ImageMatrixFactory::fromJpegFile(FILE *fp)
     return readJpegImpl(cinfo, jerr);
 }
 
-ImageMatrix ImageMatrixFactory::fromJpegBuffer(mem_image *mp)
+pImageMatrix ImageMatrixFactory::fromJpegBuffer(mem_image *mp)
 {
     jpeg_decompress_struct cinfo;
     _jpeg_error_mgr jerr;
@@ -461,7 +462,7 @@ ImageMatrix ImageMatrixFactory::fromJpegBuffer(mem_image *mp)
 
 #ifdef _WIN32
 
-ImageMatrix ImageMatrixFactory::fromJpegResource(UINT nResID, LPCTSTR lpType, HMODULE hModule)
+pImageMatrix ImageMatrixFactory::fromJpegResource(UINT nResID, LPCTSTR lpType, HMODULE hModule)
 {
     HRSRC hRsrc = FindResource(hModule, MAKEINTRESOURCE(nResID), L"lpType");
     if (hRsrc == NULL)
@@ -476,7 +477,7 @@ ImageMatrix ImageMatrixFactory::fromJpegResource(UINT nResID, LPCTSTR lpType, HM
 
     auto mp = ImageMatrixFactory::mem_image(lpVoid, dwSize);
     try {
-        ImageMatrix im = fromJpegBuffer(&mp);
+        pImageMatrix im = fromJpegBuffer(&mp);
         UnlockResource(hImgData);
         FreeResource(hImgData);
         return im;
@@ -489,7 +490,7 @@ ImageMatrix ImageMatrixFactory::fromJpegResource(UINT nResID, LPCTSTR lpType, HM
 }
 #endif
 
-ImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jpeg_error_mgr& jerr)
+pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jpeg_error_mgr& jerr)
 {
     JSAMPARRAY buffer;            /* Output row buffer */
     int row_stride;               /* physical row width in output buffer */
@@ -598,10 +599,10 @@ ImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jpe
     * so as to simplify the setjmp error logic above.  (Actually, I don't
     * think that jpeg_destroy can do an error exit, but why assume anything...)
     */
-    return ImageMatrix(table, w, h);
+    return pImageMatrix(new ImageMatrix(table, w, h));
 }
 
-void ImageMatrixFactory::dumpJpegFile(const ImageMatrix& im, const char* filePath, uint8_t quality)
+void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const char* filePath, uint8_t quality)
 {
     if (quality > 100)
         throw std::invalid_argument("Quality range [1,100]");
@@ -618,7 +619,7 @@ void ImageMatrixFactory::dumpJpegFile(const ImageMatrix& im, const char* filePat
     }
 }
 
-void ImageMatrixFactory::dumpJpegFile(const ImageMatrix& im, const wchar_t* filePath, uint8_t quality)
+void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const wchar_t* filePath, uint8_t quality)
 {
     if (quality > 100)
         throw std::invalid_argument("Quality range [1,100]");
@@ -635,7 +636,7 @@ void ImageMatrixFactory::dumpJpegFile(const ImageMatrix& im, const wchar_t* file
     }
 }
 
-void ImageMatrixFactory::dumpJpegFile(const ImageMatrix& im, FILE *fp, uint8_t quality)
+void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, FILE *fp, uint8_t quality)
 {
     /* This struct contains the JPEG compression parameters and pointers to
      * working space (which is allocated as needed by the JPEG library).
@@ -683,8 +684,8 @@ void ImageMatrixFactory::dumpJpegFile(const ImageMatrix& im, FILE *fp, uint8_t q
     /* First we supply a description of the input image.
      * Four fields of the cinfo struct must be filled in:
      */
-    cinfo.image_width = im.getWidth();    /* image width and height, in pixels */
-    cinfo.image_height = im.getHeight();
+    cinfo.image_width = im->getWidth();    /* image width and height, in pixels */
+    cinfo.image_height = im->getHeight();
     cinfo.input_components = 4;           /* # of color components per pixel */
     cinfo.in_color_space = JCS_EXT_BGRA;  /* colorspace of input image */
 
@@ -715,14 +716,14 @@ void ImageMatrixFactory::dumpJpegFile(const ImageMatrix& im, FILE *fp, uint8_t q
      * To keep things simple, we pass one scanline per call; you can pass
      * more if you wish, though.
      */
-    row_stride = im.getWidth() * 4; /* JSAMPLEs per row in image_buffer */
+    row_stride = im->getWidth() * 4; /* JSAMPLEs per row in image_buffer */
 
     while (cinfo.next_scanline < cinfo.image_height) {
         /* jpeg_write_scanlines expects an array of pointers to scanlines.
          * Here the array is only one element long, but you could pass
          * more than one scanline at a time if that's more convenient.
          */
-        row_pointer[0] = (JSAMPROW)im.getMatrix()[cinfo.next_scanline];
+        row_pointer[0] = (JSAMPROW)im->getMatrix()[cinfo.next_scanline];
         (void)jpeg_write_scanlines(&cinfo, row_pointer, 1);
     }
 

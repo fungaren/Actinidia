@@ -26,7 +26,7 @@ class ImageMatrix : Matrix {
     uint32_t** matrix;
     uint16_t width;
     uint16_t height;
-
+    
 public:
     ImageMatrix()
         : matrix(nullptr), width(0), height(0) {}
@@ -56,6 +56,8 @@ public:
     }
 };
 
+typedef std::shared_ptr<ImageMatrix> pImageMatrix;
+
 class ImageMatrixFactory {
 
     static void png_read_data_fn(png_structp png_ptr, png_bytep dest, png_size_t length);
@@ -70,13 +72,13 @@ class ImageMatrixFactory {
 
     static void jpeg_error_exit(j_common_ptr cinfo);
 
-    static ImageMatrix fromPngFile(FILE *fp);
-    static ImageMatrix readPngImpl(png_structp png_ptr, png_infop info_ptr);
-    static ImageMatrix fromJpegFile(FILE *fp);
-    static ImageMatrix readJpegImpl(jpeg_decompress_struct& cinfo, _jpeg_error_mgr& jerr);
+    static pImageMatrix fromPngFile(FILE *fp);
+    static pImageMatrix readPngImpl(png_structp png_ptr, png_infop info_ptr);
+    static pImageMatrix fromJpegFile(FILE *fp);
+    static pImageMatrix readJpegImpl(jpeg_decompress_struct& cinfo, _jpeg_error_mgr& jerr);
 
-    static void dumpJpegFile(const ImageMatrix& im, FILE *fp, uint8_t quality);
-    static void dumpPngFile(const ImageMatrix& im, FILE *fp);
+    static void dumpJpegFile(const pImageMatrix im, FILE *fp, uint8_t quality);
+    static void dumpPngFile(const pImageMatrix im, FILE *fp);
 
 public:
     ImageMatrixFactory() = delete;
@@ -89,34 +91,34 @@ public:
             : addr(pImageRes), size(len) {}
     };
 
-    static ImageMatrix createBufferImage(uint16_t width, uint16_t height,
+    static pImageMatrix createBufferImage(uint16_t width, uint16_t height,
         uint32_t bkgrdColor = 0xFFFFFFFF) noexcept(false);
-    static ImageMatrix fromPngFile(const char* pngFile) noexcept(false);
-    static ImageMatrix fromPngFile(const wchar_t* pngFile) noexcept(false);
-    static ImageMatrix fromPngBuffer(mem_image *mp) noexcept(false);
-    static ImageMatrix fromPngBuffer(void* pImageRes, size_t len) noexcept(false) {
+    static pImageMatrix fromPngFile(const char* pngFile) noexcept(false);
+    static pImageMatrix fromPngFile(const wchar_t* pngFile) noexcept(false);
+    static pImageMatrix fromPngBuffer(mem_image *mp) noexcept(false);
+    static pImageMatrix fromPngBuffer(void* pImageRes, size_t len) noexcept(false) {
         mem_image img(pImageRes, len);
         return fromPngBuffer(&img);
     }
 #ifdef _WIN32
-    static ImageMatrix fromPngResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
+    static pImageMatrix fromPngResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
 #endif
 
-    static ImageMatrix fromJpegFile(const char* jpegFile) noexcept(false);
-    static ImageMatrix fromJpegFile(const wchar_t* jpegFile) noexcept(false);
-    static ImageMatrix fromJpegBuffer(mem_image *mp) noexcept(false);
-    static ImageMatrix fromJpegBuffer(void* pImageRes, size_t len) noexcept(false) {
+    static pImageMatrix fromJpegFile(const char* jpegFile) noexcept(false);
+    static pImageMatrix fromJpegFile(const wchar_t* jpegFile) noexcept(false);
+    static pImageMatrix fromJpegBuffer(mem_image *mp) noexcept(false);
+    static pImageMatrix fromJpegBuffer(void* pImageRes, size_t len) noexcept(false) {
         mem_image img(pImageRes, len);
         return fromJpegBuffer(&img);
     }
 #ifdef _WIN32
-    static ImageMatrix fromJpegResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
+    static pImageMatrix fromJpegResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
 #endif
     /// <summary>
     /// @param quality range [1,100]
     /// </summary>
-    static void dumpJpegFile(const ImageMatrix& im, const char* filePath, uint8_t quality = 80) noexcept(false);
-    static void dumpJpegFile(const ImageMatrix& im, const wchar_t* filePath, uint8_t quality = 80) noexcept(false);
-    static void dumpPngFile(const ImageMatrix& im, const char* filePath) noexcept(false);
-    static void dumpPngFile(const ImageMatrix& im, const wchar_t* filePath) noexcept(false);
+    static void dumpJpegFile(const pImageMatrix im, const char* filePath, uint8_t quality = 80) noexcept(false);
+    static void dumpJpegFile(const pImageMatrix im, const wchar_t* filePath, uint8_t quality = 80) noexcept(false);
+    static void dumpPngFile(const pImageMatrix im, const char* filePath) noexcept(false);
+    static void dumpPngFile(const pImageMatrix im, const wchar_t* filePath) noexcept(false);
 };

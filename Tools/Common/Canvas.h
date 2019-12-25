@@ -75,26 +75,26 @@ class PlatformIndependenceCanvas : Canvas
 {
     PlatformIndependenceCanvas();
 public:
-    static color getPixel(const ImageMatrix& im, int x, int y) noexcept(false);
+    static color getPixel(const pImageMatrix im, int x, int y) noexcept(false);
 
-    static void fillSolidRect(ImageMatrix& im, int left, int top, int right, int bottom, color fillColor);
+    static void fillSolidRect(pImageMatrix im, int left, int top, int right, int bottom, color fillColor);
 
-    static bool printText(ImageMatrix& im, int x, int y, std::wstring str, uint16_t len,
+    static bool printText(pImageMatrix im, int x, int y, std::wstring str, uint16_t len,
         std::wstring fontName, uint8_t fontSize, color fontColor = Constant::black,
         CharStyle style = Constant::style_default) {
         return false;
     }
 
-    static void drawLine(ImageMatrix& im, int x1, int y1, int x2, int y2,
+    static void drawLine(pImageMatrix im, int x1, int y1, int x2, int y2,
         LineStyle ls = LineStyle::solid, color lineColor = Constant::black);
 
-    static void rectangle(ImageMatrix& im, int left, int top, int right, int bottom,
+    static void rectangle(pImageMatrix im, int left, int top, int right, int bottom,
         LineStyle ls = LineStyle::solid, color lineColor = Constant::black);
 
-    static void blend(ImageMatrix& imDest, const ImageMatrix& imSrc,
+    static void blend(pImageMatrix imDest, const pImageMatrix imSrc,
         int xDest, int yDest, uint8_t opacity);
 
-    static void blend(ImageMatrix& imDest, const ImageMatrix& imSrc,
+    static void blend(pImageMatrix imDest, const pImageMatrix imSrc,
         int xDest, int yDest, int destWidth, int destHeight,
         int xSrc, int ySrc, int srcWidth, int srcHeight, uint8_t opacity);
 };
@@ -160,12 +160,12 @@ public:
     ///<summary>
     /// Do not support alpha blend. The alpha channel will be discard.
     ///</summary>
-    void paste(const ImageMatrix& imSrc, int xDest, int yDest) const;
+    void paste(const pImageMatrix imSrc, int xDest, int yDest) const;
 
     ///<summary>
     /// Do not support alpha blend. The alpha channel will be discard.
     ///</summary>
-    void paste(const ImageMatrix& imSrc,
+    void paste(const pImageMatrix imSrc,
         int xDest, int yDest, int destWidth, int destHeight,
         int xSrc, int ySrc, int srcWidth, int srcHeight) const;
 };

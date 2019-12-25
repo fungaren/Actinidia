@@ -57,29 +57,29 @@ void GdiCanvas::drawLine(int x1, int y1, int x2, int y2, LineStyle ls, color lin
     DeleteObject(Oldpen);
 }
 
-void GdiCanvas::paste(const ImageMatrix& imSrc, int xDest, int yDest) const
+void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
 {
-    if (imSrc.getMatrix() == nullptr)
+    if (imSrc->getMatrix() == nullptr)
         throw std::invalid_argument("ImageMatrix is not initialized");
     int yRange, yStart;
     if (yDest < 0) {
-        yRange = yDest + imSrc.getHeight();
+        yRange = yDest + imSrc->getHeight();
         yStart = -yDest;
         yDest = 0;
     }
     else {
-        yRange = imSrc.getHeight();
+        yRange = imSrc->getHeight();
         yStart = 0;
     }
 
     int xRange, xStart;
     if (xDest < 0) {
-        xRange = xDest + imSrc.getWidth();
+        xRange = xDest + imSrc->getWidth();
         xStart = -xDest;
         xDest = 0;
     }
     else {
-        xRange = imSrc.getWidth();
+        xRange = imSrc->getWidth();
         xStart = 0;
     }
 
@@ -88,7 +88,7 @@ void GdiCanvas::paste(const ImageMatrix& imSrc, int xDest, int yDest) const
     uint32_t i = 0;
     for (int y = 0; y < yRange; ++y)
         for (int x = 0; x < xRange; ++x)
-            buffer[i++] = imSrc.getMatrix()[y + yStart][x + xStart];
+            buffer[i++] = imSrc->getMatrix()[y + yStart][x + xStart];
 
     BITMAPINFOHEADER bmih;
     bmih.biBitCount = 32;
@@ -109,16 +109,16 @@ void GdiCanvas::paste(const ImageMatrix& imSrc, int xDest, int yDest) const
     delete[] buffer;
 }
 
-void GdiCanvas::paste(const ImageMatrix& imSrc,
+void GdiCanvas::paste(const pImageMatrix imSrc,
     int xDest, int yDest, int destWidth, int destHeight,
     int xSrc, int ySrc, int srcWidth, int srcHeight) const
 {
-    if (imSrc.getMatrix() == nullptr)
+    if (imSrc->getMatrix() == nullptr)
         throw std::invalid_argument("ImageMatrix is not initialized");
 
     if (xSrc < 0 || ySrc < 0)
         return;
-    if (ySrc + srcHeight > imSrc.getHeight() || xSrc + srcWidth > imSrc.getWidth())
+    if (ySrc + srcHeight > imSrc->getHeight() || xSrc + srcWidth > imSrc->getWidth())
         return;
 
     int yRange, yStart;
@@ -150,11 +150,11 @@ void GdiCanvas::paste(const ImageMatrix& imSrc,
     if (srcWidth == destWidth && srcHeight == destHeight)
         for (int y = 0; y < yRange; ++y)
             for (int x = 0; x < xRange; ++x)
-                buffer[i++] = imSrc.getMatrix()[y + ySrc + yStart][x + xSrc + xStart];
+                buffer[i++] = imSrc->getMatrix()[y + ySrc + yStart][x + xSrc + xStart];
     else
         for (int y = 0; y < yRange; ++y)
             for (int x = 0; x < xRange; ++x)
-                buffer[i++] = imSrc.getMatrix()
+                buffer[i++] = imSrc->getMatrix()
                 [y*srcHeight / destHeight + ySrc + yStart][x*srcWidth / destWidth + xSrc + xStart];
 
     BITMAPINFOHEADER bmih;

@@ -7,7 +7,7 @@ HWND hWnd = NULL;
 // HINSTANCE of the process
 HINSTANCE hInst;
 // Logo image
-ImageMatrix logo;
+pImageMatrix logo;
 
 inline void disableButtons()
 {
@@ -63,7 +63,7 @@ void deployUnpack(const path& resFile)
 #include "Common/Canvas.h"
 bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstring>& imgFiles)
 {
-    std::vector<ImageMatrix> imgs;
+    std::vector<pImageMatrix> imgs;
     uint32_t width = 0, total_height = 0;
     try {
         for (auto& file : imgFiles) {
@@ -73,11 +73,11 @@ bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstr
             else
                 imgs.emplace_back(ImageMatrixFactory::fromJpegFile(file.c_str()));
             if (width == 0)
-                width = imgs.back().getWidth();
-            else if (imgs.back().getWidth() != width)
+                width = imgs.back()->getWidth();
+            else if (imgs.back()->getWidth() != width)
                 throw std::runtime_error("Images width don't match.\n"\
                     "Only images with the same width can be concatenated.");
-            total_height += imgs.back().getHeight();
+            total_height += imgs.back()->getHeight();
             if (total_height > std::numeric_limits<uint16_t>::max())
                 throw std::runtime_error("Image height is too large. \n"\
                     "Reduce the number of images and try again.");
@@ -87,11 +87,11 @@ bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstr
         MessageBoxA(NULL, e.what(), "Error", MB_OK | MB_ICONERROR);
         return false;
     }
-    ImageMatrix temp = ImageMatrixFactory::createBufferImage(width, total_height, Canvas::Constant::alpha);
+    auto temp = ImageMatrixFactory::createBufferImage(width, total_height, Canvas::Constant::alpha);
     uint16_t y = 0;
-    for (const ImageMatrix& i : imgs) {
+    for (const pImageMatrix i : imgs) {
         PiCanvas::blend(temp, i, 0, y, 0xFF);
-        y += i.getHeight();
+        y += i->getHeight();
     }
     try {
         std::wstring extName = destImage.substr(destImage.rfind(L'.') + 1);
@@ -140,8 +140,9 @@ void dialogInit()
     DestroyIcon(hIcon);
 
     logo = ImageMatrixFactory::fromPngResource(IDB_LOGO, L"PNG", hInst);
-    ImageMatrix temp = ImageMatrixFactory::createBufferImage(logo.getWidth() / 2, logo.getHeight() / 2, 0xFFF0F0F0);
-    PiCanvas::blend(temp, logo, 0, 0, logo.getWidth() / 2, logo.getHeight() / 2, 0, 0, logo.getWidth(), logo.getHeight(), 0xFF);
+    auto temp = ImageMatrixFactory::createBufferImage(logo->getWidth() / 2, logo->getHeight() / 2, 0xFFF0F0F0);
+    PiCanvas::blend(temp, logo, 0, 0, logo->getWidth() / 2, logo->getHeight() / 2,
+        0, 0, logo->getWidth(), logo->getHeight(), 0xFF);
     logo = std::move(temp);
 }
 

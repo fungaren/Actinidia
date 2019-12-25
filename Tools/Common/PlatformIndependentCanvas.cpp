@@ -2,38 +2,38 @@
 #include "ImageMatrix.h"
 #include "Canvas.h"
 
-Canvas::color PlatformIndependenceCanvas::getPixel(const ImageMatrix& im, int x, int y) noexcept(false)
+Canvas::color PlatformIndependenceCanvas::getPixel(const pImageMatrix im, int x, int y) noexcept(false)
 {
-    if (x < 0 || y < 0 || x >= im.getWidth() || y >= im.getHeight())
+    if (x < 0 || y < 0 || x >= im->getWidth() || y >= im->getHeight())
         throw (std::invalid_argument("Coordinate out of range"));
     else
-        return (color)im.getMatrix()[y][x];
+        return (color)im->getMatrix()[y][x];
 }
 
-void PlatformIndependenceCanvas::fillSolidRect(ImageMatrix& im, int left, int top, int right, int bottom, color fillColor)
+void PlatformIndependenceCanvas::fillSolidRect(pImageMatrix im, int left, int top, int right, int bottom, color fillColor)
 {
-    if (im.getMatrix() == nullptr)
+    if (im->getMatrix() == nullptr)
         throw std::invalid_argument("ImageMatrix is not initialized");
 
     if (left < 0) left = 0;
     if (top < 0) top = 0;
-    if (right >= im.getWidth()) right = im.getWidth() - 1;
-    if (bottom >= im.getHeight()) bottom = im.getHeight() - 1;
+    if (right >= im->getWidth()) right = im->getWidth() - 1;
+    if (bottom >= im->getHeight()) bottom = im->getHeight() - 1;
 
     for (int y = top; y < bottom; ++y) {
         for (int x = left; x < right; ++x) {
-            im.getMatrix()[y][x] = fillColor;
+            im->getMatrix()[y][x] = fillColor;
         }
     }
 }
 
-void PlatformIndependenceCanvas::drawLine(ImageMatrix& im, int x1, int y1, int x2, int y2, LineStyle ls, color lineColor)
+void PlatformIndependenceCanvas::drawLine(pImageMatrix im, int x1, int y1, int x2, int y2, LineStyle ls, color lineColor)
 {
-    if (im.getMatrix() == nullptr)
+    if (im->getMatrix() == nullptr)
         throw std::invalid_argument("ImageMatrix is not initialized");
 
-    uint16_t h = im.getHeight();
-    uint16_t w = im.getWidth();
+    uint16_t h = im->getHeight();
+    uint16_t w = im->getWidth();
     // coordinates may not in rectangle
     if (x1 == x2) {
         if (x1 < 0 || x1 >= w) return;
@@ -43,10 +43,10 @@ void PlatformIndependenceCanvas::drawLine(ImageMatrix& im, int x1, int y1, int x
         if (y2 >= h) y2 = h - 1;
         if (y1 < y2)
             for (uint16_t y = y1; y <= y2; ++y)
-                im.getMatrix()[y][x1] = lineColor;
+                im->getMatrix()[y][x1] = lineColor;
         else
             for (uint16_t y = y2; y <= y1; ++y)
-                im.getMatrix()[y][x1] = lineColor;
+                im->getMatrix()[y][x1] = lineColor;
     }
     else if (y1 == y2) {
         if (y1 < 0 || y1 >= h) return;
@@ -56,10 +56,10 @@ void PlatformIndependenceCanvas::drawLine(ImageMatrix& im, int x1, int y1, int x
         if (x2 >= w) x2 = w - 1;
         if (x1 < x2)
             for (uint16_t x = x1; x <= x2; ++x)
-                im.getMatrix()[y1][x] = lineColor;
+                im->getMatrix()[y1][x] = lineColor;
         else
             for (uint16_t x = x2; x <= x1; ++x)
-                im.getMatrix()[y1][x] = lineColor;
+                im->getMatrix()[y1][x] = lineColor;
     }
     else {
         double k = (y2 - y1) / (double)(x2 - x1);
@@ -165,23 +165,23 @@ void PlatformIndependenceCanvas::drawLine(ImageMatrix& im, int x1, int y1, int x
         if (-1 <= k && k <= 1) {
             if (x1 < x2)
                 for (uint16_t x = x1; x <= x2; ++x)
-                    im.getMatrix()[(int)(k*x + b)][x] = lineColor;
+                    im->getMatrix()[(int)(k*x + b)][x] = lineColor;
             else
                 for (uint16_t x = x2; x <= x1; ++x)
-                    im.getMatrix()[(int)(k*x + b)][x] = lineColor;
+                    im->getMatrix()[(int)(k*x + b)][x] = lineColor;
         } else {
             k = 1 / k;
             if (y1 < y2)
                 for (uint16_t y = y1; y <= y2; ++y)
-                    im.getMatrix()[y][(int)((y - b)*k)] = lineColor;
+                    im->getMatrix()[y][(int)((y - b)*k)] = lineColor;
             else
                 for (uint16_t y = y2; y <= y1; ++y)
-                    im.getMatrix()[y][(int)((y - b)*k)] = lineColor;
+                    im->getMatrix()[y][(int)((y - b)*k)] = lineColor;
         }
     }
 }
 
-void PlatformIndependenceCanvas::rectangle(ImageMatrix& im, int left, int top, int right, int bottom, LineStyle ls, color lineColor)
+void PlatformIndependenceCanvas::rectangle(pImageMatrix im, int left, int top, int right, int bottom, LineStyle ls, color lineColor)
 {
     drawLine(im, left, top, right, top, ls, lineColor);
     drawLine(im, left, top, left, bottom, ls, lineColor);
@@ -189,94 +189,94 @@ void PlatformIndependenceCanvas::rectangle(ImageMatrix& im, int left, int top, i
     drawLine(im, left, bottom, right, bottom, ls, lineColor);
 }
 
-void PlatformIndependenceCanvas::blend(ImageMatrix& imDest, const ImageMatrix& imSrc,
+void PlatformIndependenceCanvas::blend(pImageMatrix imDest, const pImageMatrix imSrc,
     int xDest, int yDest, uint8_t opacity)
 {
-    if (imDest.getMatrix() == nullptr || imSrc.getMatrix() == nullptr)
+    if (imDest->getMatrix() == nullptr || imSrc->getMatrix() == nullptr)
         throw std::invalid_argument("ImageMatrix is not initialized");
-    if (imDest.getMatrix() == imSrc.getMatrix())
+    if (imDest->getMatrix() == imSrc->getMatrix())
         throw std::invalid_argument("Source and destination cannot be the same");
 
     int yRange, yStart;
     if (yDest < 0) {
-        yRange = yDest + imSrc.getHeight() > imDest.getHeight() ? imDest.getHeight() : yDest + imSrc.getHeight();
+        yRange = yDest + imSrc->getHeight() > imDest->getHeight() ? imDest->getHeight() : yDest + imSrc->getHeight();
         yStart = -yDest;
         yDest = 0;
     }
     else {
-        yRange = yDest + imSrc.getHeight() > imDest.getHeight() ? imDest.getHeight() - yDest : imSrc.getHeight();
+        yRange = yDest + imSrc->getHeight() > imDest->getHeight() ? imDest->getHeight() - yDest : imSrc->getHeight();
         yStart = 0;
     }
 
     int xRange, xStart;
     if (xDest < 0) {
-        xRange = xDest + imSrc.getWidth() > imDest.getWidth() ? imDest.getWidth() : xDest + imSrc.getWidth();
+        xRange = xDest + imSrc->getWidth() > imDest->getWidth() ? imDest->getWidth() : xDest + imSrc->getWidth();
         xStart = -xDest;
         xDest = 0;
     }
     else {
-        xRange = xDest + imSrc.getWidth() > imDest.getWidth() ? imDest.getWidth() - xDest : imSrc.getWidth();
+        xRange = xDest + imSrc->getWidth() > imDest->getWidth() ? imDest->getWidth() - xDest : imSrc->getWidth();
         xStart = 0;
     }
     // Maybe use a 255-elements table to store all possible opacity value, 
     // and in that way we can get a lot of speed escalate. But now I slack.
     for (int y = 0; y < yRange; y++) {
         for (int x = 0; x < xRange; x++) {
-            color src = imSrc.getMatrix()[y + yStart][x + xStart];
-            color *dst = &(imDest.getMatrix()[yDest + y][xDest + x]);
+            color src = imSrc->getMatrix()[y + yStart][x + xStart];
+            color *dst = &(imDest->getMatrix()[yDest + y][xDest + x]);
             *dst = Canvas::blend(*dst, src, opacity);
         }
     }
 }
 
-void PlatformIndependenceCanvas::blend(ImageMatrix& imDest, const ImageMatrix& imSrc,
+void PlatformIndependenceCanvas::blend(pImageMatrix imDest, const pImageMatrix imSrc,
     int xDest, int yDest, int destWidth, int destHeight,
     int xSrc, int ySrc, int srcWidth, int srcHeight, uint8_t opacity)
 {
-    if (imDest.getMatrix() == nullptr || imSrc.getMatrix() == nullptr)
+    if (imDest->getMatrix() == nullptr || imSrc->getMatrix() == nullptr)
         throw std::invalid_argument("ImageMatrix is not initialized");
-    if (imDest.getMatrix() == imSrc.getMatrix())
+    if (imDest->getMatrix() == imSrc->getMatrix())
         throw std::invalid_argument("Source and destination cannot be the same");
 
-    if (ySrc + srcHeight > imSrc.getHeight() || xSrc + srcWidth > imSrc.getWidth())
+    if (ySrc + srcHeight > imSrc->getHeight() || xSrc + srcWidth > imSrc->getWidth())
         return;
 
     int yRange, yStart;
     if (yDest < 0) {
-        yRange = yDest + destHeight > imDest.getHeight() ? imDest.getHeight() : yDest + destHeight;
+        yRange = yDest + destHeight > imDest->getHeight() ? imDest->getHeight() : yDest + destHeight;
         yStart = -yDest;
         yDest = 0;
     }
     else {
-        yRange = yDest + destHeight > imDest.getHeight() ? imDest.getHeight() - yDest : destHeight;
+        yRange = yDest + destHeight > imDest->getHeight() ? imDest->getHeight() - yDest : destHeight;
         yStart = 0;
     }
 
     int xRange, xStart;
     if (xDest < 0) {
-        xRange = xDest + destWidth > imDest.getWidth() ? imDest.getWidth() : xDest + destWidth;
+        xRange = xDest + destWidth > imDest->getWidth() ? imDest->getWidth() : xDest + destWidth;
         xStart = -xDest;
         xDest = 0;
     }
     else {
-        xRange = xDest + destWidth > imDest.getWidth() ? imDest.getWidth() - xDest : destWidth;
+        xRange = xDest + destWidth > imDest->getWidth() ? imDest->getWidth() - xDest : destWidth;
         xStart = 0;
     }
 
     if (srcWidth == destWidth && srcHeight == destHeight)
         for (int y = 0; y < yRange ; y++) {
             for (int x = 0; x < xRange; x++) {
-                color src = imSrc.getMatrix()[y + ySrc + yStart][x + xSrc + xStart];
-                color *dst = &(imDest.getMatrix()[yDest + y][xDest + x]);
+                color src = imSrc->getMatrix()[y + ySrc + yStart][x + xSrc + xStart];
+                color *dst = &(imDest->getMatrix()[yDest + y][xDest + x]);
                 *dst = Canvas::blend(*dst, src, opacity);
             }
         }
     else
         for (int y = 0; y < yRange; y++) {
             for (int x = 0; x < xRange; x++) {
-                color src = imSrc.getMatrix()
+                color src = imSrc->getMatrix()
                     [y*srcHeight / destHeight + ySrc + yStart][x*srcWidth / destWidth + xSrc + xStart];
-                color *dst = &(imDest.getMatrix()[yDest + y][xDest + x]);
+                color *dst = &(imDest->getMatrix()[yDest + y][xDest + x]);
                 *dst = Canvas::blend(*dst, src, opacity);
             }
         }

@@ -38,9 +38,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     // resource file or resource folder
     std::wstring game_res = L"game.res";
-    int argc;
-    LPWSTR *argv = CommandLineToArgvW(lpCmdLine, &argc);
-    if (argc == 1)
+    if (*lpCmdLine == '\0')
     {
         try {
             // no resource file specified, use default
@@ -53,20 +51,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                 bDirectMode = true;
             else {
                 MessageBox(NULL, L"Failed to load default resource file \"game.res\"", L"Error", MB_ICONERROR);
-                LocalFree(argv);
                 return 1;
             }
         }
     }
-    else if (argc == 2)
+    else
     {
-        std::filesystem::path path = argv[1];
+        std::filesystem::path path = lpCmdLine;
         if (!std::filesystem::exists(path)) {
-            LocalFree(argv);
             return 1;
         }
         // use specified resource file
-        if (path.extension() == L"res")
+        if (path.extension() == L".res")
         {
             try {
                 pack = ResourcePack::parsePack(path);
@@ -75,17 +71,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
             catch (std::runtime_error e) {
                 MessageBox(NULL, L"Failed to load the resource file", L"Error", MB_ICONERROR);
-                LocalFree(argv);
                 return 1;
             }
         }
         else {
             MessageBox(NULL, L"Invalid resource file", L"Error", MB_ICONERROR);
-            LocalFree(argv);
             return 1;
         }
     }
-    LocalFree(argv);
 
     // load user data
     if (bDirectMode) {
@@ -152,7 +145,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Initialize Lua environment and run script
     if (LuaInit())
     {
-        w.create(game_res, window_width, window_height, NULL,
+        w.create(game_res, (uint16_t)window_width, (uint16_t)window_height, NULL,
             LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP)));
         timer = new Timer();
         timer->begin(std::chrono::milliseconds(20), [] {

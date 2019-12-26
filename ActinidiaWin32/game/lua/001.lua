@@ -7,7 +7,7 @@ local current = {}
 ======================================================]]
 
 function current.OnCreate()
-	logo = GetImage("res\\actinidia.png")
+	logo = GetImage("actinidia.png")
 	return ""
 end
 
@@ -17,7 +17,7 @@ function current.OnPaint(WndGraphic)
 	
 	local x = core.screenwidth - GetWidth(logo)
 	local y = core.screenheight - GetHeight(logo)
-	PasteToImage(g, logo, x//2, y//2)
+	PasteToImage(g, logo, 0, 0)
 	-- TODO: Add your code here.
 
 	PasteToWnd(WndGraphic,g)

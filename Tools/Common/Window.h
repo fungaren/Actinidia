@@ -85,7 +85,8 @@ public:
     }
 #endif /* _GTK */
     void refresh();
-    void alert(const std::wstring& str, const std::wstring& title, uint32_t flag=0) const;
+    void alert(const std::string& str, const std::string& title, uint32_t flag = 0) const;
+    void alert(const std::wstring& str, const std::wstring& title, uint32_t flag = 0) const;
     void setTitle(const std::wstring& str);
 
     // a pair (left, top)

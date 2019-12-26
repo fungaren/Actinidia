@@ -106,6 +106,11 @@ void Window::refresh()
     InvalidateRect(hWnd, &rc, FALSE);
 }
 
+void Window::alert(const std::string& str, const std::string& title, uint32_t flag) const
+{
+    MessageBoxA(hWnd, str.c_str(), title.c_str(), flag);
+}
+
 void Window::alert(const std::wstring& str, const std::wstring& title, uint32_t flag) const
 {
     MessageBox(hWnd, str.c_str(), title.c_str(), flag);

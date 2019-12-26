@@ -3,7 +3,7 @@
 #include "../Tools/Common/ResourcePack.h"
 
 // callbacks
-bool OnInit();
+bool LuaInit();
 void OnClean();
 void OnSetFocus();
 void OnKillFocus();
@@ -16,9 +16,8 @@ void OnLButtonUp(uint32_t, int x, int y);
 void OnMouseMove(uint32_t, int x, int y);
 void OnMouseWheel(uint32_t, short zDelta, int x, int y);
 
+// In Direct mode, the name of resource folder must be "game"
 bool bDirectMode;
-// resource file or resource folder
-std::wstring game_res = L"game.res";
 ResourcePack pack;
 // user data
 std::wstring user_data_path;
@@ -32,6 +31,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
+    // resource file or resource folder
+    std::wstring game_res = L"game.res";
     int argc;
     LPWSTR *argv = CommandLineToArgvW(lpCmdLine, &argc);
     if (argc == 1)
@@ -42,9 +43,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             bDirectMode = false;
         }
         catch (std::runtime_error e) {
-            MessageBox(NULL, L"Failed to load default resource file \"game.res\"", L"Error", MB_OK);
-            LocalFree(argv);
-            return 1;
+            // no default resource file found, try direct mode
+            if (std::filesystem::exists("game") && std::filesystem::is_directory("game"))
+                bDirectMode = true;
+            else {
+                MessageBox(NULL, L"Failed to load default resource file \"game.res\"", L"Error", MB_ICONERROR);
+                LocalFree(argv);
+                return 1;
+            }
         }
     }
     else if (argc == 2)
@@ -54,29 +60,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             LocalFree(argv);
             return 1;
         }
-        // Directory: Direct Mode
-        if (std::filesystem::is_directory(path))
-        {
-            bDirectMode = true;
-            game_res = argv[1];
-        }
-        // Resource file
-        else if (path.extension() == L"res")
+        // use specified resource file
+        if (path.extension() == L"res")
         {
             try {
-                // use specified resource file
                 pack = std::move(ResourcePack::parsePack(path));
                 bDirectMode = false;
                 game_res = path.filename();
             }
             catch (std::runtime_error e) {
-                MessageBox(NULL, L"Failed to load the resource file", L"Error", MB_OK);
+                MessageBox(NULL, L"Failed to load the resource file", L"Error", MB_ICONERROR);
                 LocalFree(argv);
                 return 1;
             }
         }
         else {
-            MessageBox(NULL, L"Invalid resource file", L"Error", MB_OK);
+            MessageBox(NULL, L"Invalid resource file", L"Error", MB_ICONERROR);
             LocalFree(argv);
             return 1;
         }
@@ -85,7 +84,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // load user data
     if (bDirectMode) {
-        user_data_path = std::filesystem::path(game_res).filename().wstring() + L".data";
+        user_data_path = L"game.data";
     }
     else {
         user_data_path = game_res + L".data";
@@ -136,6 +135,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         OnClean();
         return true;
     });
-    w.create(L"demo");    
+    
+    // Initialize Lua environment and run script
+    if (LuaInit())
+        w.create(L"demo");
     return 0;
 }

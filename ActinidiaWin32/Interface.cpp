@@ -14,9 +14,10 @@
 #define MIN_HEIGHT 100
 size_t WIN_WIDTH = 1024;
 size_t WIN_HEIGHT = 768;
-lua_State* L;
+lua_State* L = nullptr;
 extern ResourcePack pack;
 extern Window w;
+extern bool bDirectMode;
 extern std::map<const std::string, std::string> user_data;
 
 //==============================================
@@ -105,11 +106,25 @@ int GetText(lua_State *L)
     lua_pop(L, 1);
     char* p;
     uint32_t size;
-    if (pack.readResource(f, &p, &size))
-    {
-        lua_pushlstring(L, (char*)p, size);
-        return 1;
+    if (bDirectMode) {
+        std::ifstream in("./game/" + f, std::ios::binary);
+        if (in.good()) {
+            in.seekg(0, std::ios::end);
+            size = in.tellg();
+            p = new char[size];
+            in.seekg(0, std::ios::beg);
+            in.read(p, size);
+
+            lua_pushlstring(L, p, size);
+            return 1;
+        }
     }
+    else
+        if (pack.readResource("./game/" + f, &p, &size))
+        {
+            lua_pushlstring(L, p, size);
+            return 1;
+        }
     lua_pushnil(L);
     return 1;
 }
@@ -123,18 +138,36 @@ int GetImage(lua_State *L)
     lua_pop(L, 1);
     char* p;
     uint32_t size;
-    if (pack.readResource(f, &p, &size))
-    {
-        pImageMatrix g;
+    pImageMatrix g;
+    if (bDirectMode) {
         try {
-            g = ImageMatrixFactory::fromJpegBuffer(p, size);
+            if (f.substr(f.size() - 3, 3) == "png")
+                g = ImageMatrixFactory::fromPngFile(("./game/" + f).c_str());
+
+            else
+                g = ImageMatrixFactory::fromJpegFile(("./game/" + f).c_str());
             lua_pushinteger(L, (lua_Integer)g);
             return 1;
         }
         catch (std::runtime_error e) {
-            ;
+            w.alert(e.what(), "ERROR", MB_ICONERROR);
         }
     }
+    else
+        if (pack.readResource("./game/" + f, &p, &size))
+        {
+            try {
+                if (f.substr(f.size() - 3, 3) == "png")
+                    g = ImageMatrixFactory::fromPngBuffer(p, size);
+                else 
+                    g = ImageMatrixFactory::fromJpegBuffer(p, size);
+                lua_pushinteger(L, (lua_Integer)g);
+                return 1;
+            }
+            catch (std::runtime_error e) {
+                w.alert(e.what(), "ERROR", MB_ICONERROR);
+            }
+        }
     lua_pushnil(L);
     return 1;
 }
@@ -149,16 +182,37 @@ int GetSound(lua_State *L)
     lua_pop(L, 2);
     char* p;
     uint32_t size;
-    if (pack.readResource(f, &p, &size))
-    {
-        HSTREAM sound = BASS_StreamCreateFile(TRUE, p, 0, size,
-            b_loop ? BASS_SAMPLE_LOOP : 0);
-        if (sound)
+    if (bDirectMode) {
+        std::ifstream in("./game/" + f, std::ios::binary);
+        if (in.good())
         {
-            lua_pushinteger(L, sound);
-            return 1;
+            in.seekg(0, std::ios::end);
+            size = in.tellg();
+            p = new char[size];
+            in.seekg(0, std::ios::beg);
+            in.read(p, size);
+
+            HSTREAM sound = BASS_StreamCreateFile(TRUE, p, 0, size,
+                b_loop ? BASS_SAMPLE_LOOP : 0);
+            if (sound)
+            {
+                lua_pushinteger(L, sound);
+                return 1;
+            }
         }
+        in.close();
     }
+    else 
+        if (pack.readResource("./game/" + f, &p, &size))
+        {
+            HSTREAM sound = BASS_StreamCreateFile(TRUE, p, 0, size,
+                b_loop ? BASS_SAMPLE_LOOP : 0);
+            if (sound)
+            {
+                lua_pushinteger(L, sound);
+                return 1;
+            }
+        }
     lua_pushnil(L);
     return 1;
 }
@@ -356,7 +410,7 @@ int SaveSetting(lua_State *L)
 //=                  Callback                  =
 //==============================================
 
-bool OnInit()
+bool LuaInit()
 {
     BASS_Init(-1, 44100, 0, 0, 0);
 
@@ -385,9 +439,27 @@ bool OnInit()
     lua_register(L, "GetSetting", GetSetting);
     lua_register(L, "SaveSetting", SaveSetting);
 
-    char* p;
+    // Load configure
+    bool ok = false;
+    char* p = nullptr;
     uint32_t size;
-    if (pack.readResource("./game/config.ini", &p, &size)) // Load configure
+    std::ifstream in;
+    if (!bDirectMode && pack.readResource("./game/config.ini", &p, &size))
+        ok = true;
+    if (bDirectMode) {
+        in.open("./game/config.ini", std::ios::binary);
+        if (in.good())
+        {
+            in.seekg(0, std::ios::end);
+            size = in.tellg();
+            p = new char[size];
+            in.seekg(0, std::ios::beg);
+            in.read(p, size);
+            ok = true;
+        }
+        in.close();
+    }
+    if (ok)
     {
         std::string conf_str(p, size);
         conf_str += '\n';
@@ -407,11 +479,27 @@ bool OnInit()
             result = std::stoi(conf_str.substr(w_begin, w_end - w_begin));
             if (result > MIN_HEIGHT) WIN_HEIGHT = result;
         }
+        if (p) delete p;
     }
-
+    ok = false;
+    p = nullptr;
+    if (!bDirectMode && pack.readResource("./game/lua/main.lua", &p, &size))
+        ok = true;
+    if (bDirectMode) {
+        in.open("./game/lua/main.lua", std::ios::binary);
+        if (in.good())
+        {
+            in.seekg(0, std::ios::end);
+            size = in.tellg();
+            p = new char[size];
+            in.seekg(0, std::ios::beg);
+            in.read(p, size);
+            ok = true;
+        }
+        in.close();
+    }
     // Load scripts & set screen size
-    if (pack.readResource("./game/lua/main.lua", &p, &size) &&
-        luaL_loadbuffer(L, p, size, "line") == 0 &&
+    if (ok && luaL_loadbuffer(L, p, size, "line") == 0 &&
         lua_pcall(L, 0, LUA_MULTRET, 0) == 0)
     {
         lua_getglobal(L, "core");
@@ -420,6 +508,11 @@ bool OnInit()
         lua_getglobal(L, "core");
         lua_pushinteger(L, WIN_HEIGHT);
         lua_setfield(L, -2, "screenheight");
+
+        lua_getglobal(L, "OnCreate");
+        lua_pcall(L, 0, 0, 0);
+
+        if (p) delete p;
         return true;
     }
     else
@@ -433,6 +526,7 @@ void OnClean()
 {
     BASS_Free();
     lua_close(L);
+    L = nullptr;
 }
 
 // lua: void OnSetFocus()
@@ -443,8 +537,10 @@ void OnSetFocus() {
 
 // lua: void OnKillFocus()
 void OnKillFocus() {
-    lua_getglobal(L, "OnKillFocus");
-    lua_pcall(L, 0, 0, 0);
+    if (L) {
+        lua_getglobal(L, "OnKillFocus");
+        lua_pcall(L, 0, 0, 0);
+    }
 }
 
 // lua: void OnPaint(WndGraphic)
@@ -508,3 +604,4 @@ void OnMouseWheel(uint32_t, short zDelta, int x, int y) {
     lua_pushinteger(L, y - location.second);
     lua_pcall(L, 3, 0, 0);
 }
+

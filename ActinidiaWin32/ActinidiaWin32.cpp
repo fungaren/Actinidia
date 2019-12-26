@@ -123,7 +123,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
         return false;
     });
-    w.setExitCallback([](uint32_t, WPARAM, LPARAM) {
+    w.setExitCallback([]() {
         OnClose();
 
         // save user data
@@ -134,6 +134,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         out.close();
 
         OnClean();
+        return true;
     });
     w.create(L"demo");    
     return 0;

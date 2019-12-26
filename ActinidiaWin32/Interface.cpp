@@ -4,9 +4,8 @@
 #include "../Tools/Common/Canvas.h"
 #include "../Tools/Common/ImageMatrix.h"
 #include "../Tools/Common/ResourcePack.h"
-extern "C" {
-#include "lua/lua.h"
-}
+#include "lua/lua.hpp"
+
 #pragma comment(lib, "lua/lua.lib")
 #include "bass/bass.h"
 #pragma comment(lib, "bass/bass.lib")
@@ -361,7 +360,7 @@ bool OnInit()
 {
     BASS_Init(-1, 44100, 0, 0, 0);
 
-    L = lua_newstate();
+    L = luaL_newstate();
     luaL_openlibs(L);
 
     lua_register(L, "CreateImage", CreateImage);

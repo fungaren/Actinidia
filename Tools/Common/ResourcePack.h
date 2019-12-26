@@ -54,25 +54,19 @@ class ResourcePack {
             _ASSERT(dataSize != 0);
         }
     };
-public:
     std::vector<ResourceFile> list;
     ResourcePack() {};
+public:
     ResourcePack(ResourcePack&) = delete;
-    ResourcePack(ResourcePack&& r) : list(r.list) {
-        r.list.clear();
-    };
     ~ResourcePack() {
         for (auto& i : list)
             delete i.data;
     }
-    void operator=(ResourcePack&& r) {
-        list = r.list;
-        r.list.clear();
-    }
+    typedef ResourcePack* pResourcePack;
 
     // Open a package and construct a ResourcePack instance.
     // Will throw an exception for any error occurred.
-    static ResourcePack parsePack(const std::filesystem::path& resFile) noexcept(false);
+    static pResourcePack parsePack(const std::filesystem::path& resFile) noexcept(false);
     
     // Read a file by path, the file pointer and file size
     // will be stored in @p and @size. Return true if succuss.
@@ -87,3 +81,5 @@ public:
     }
    
 };
+
+typedef ResourcePack* pResourcePack;

@@ -20,13 +20,15 @@ void OnMouseWheel(uint32_t, short zDelta, int x, int y);
 
 // In Direct mode, the name of resource folder must be "game"
 bool bDirectMode;
-ResourcePack pack;
+pResourcePack pack;
 // user data
 std::wstring user_data_path;
 std::map<const std::string, std::string> user_data;
 // GUI
 Window w;
-Timer timer;
+size_t window_width = 1024;
+size_t window_height = 768;
+Timer* timer;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -42,7 +44,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         try {
             // no resource file specified, use default
-            pack = std::move(ResourcePack::parsePack(game_res));
+            pack = ResourcePack::parsePack(game_res);
             bDirectMode = false;
         }
         catch (std::runtime_error e) {
@@ -67,7 +69,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         if (path.extension() == L"res")
         {
             try {
-                pack = std::move(ResourcePack::parsePack(path));
+                pack = ResourcePack::parsePack(path);
                 bDirectMode = false;
                 game_res = path.filename();
             }
@@ -107,6 +109,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     in.close();
 
     // set callbacks
+    
     w.setLButtonDownHandler(OnLButtonDown);
     w.setLButtonUpHandler(OnLButtonUp);
     w.setPaintHandler(OnPaint);
@@ -114,8 +117,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     w.setKeyUpHandler(OnKeyUp);
     w.setMouseMoveHandler(OnMouseMove);
     w.setMouseWheelHandler(OnMouseWheel);
-    w.setElseHandler([](uint32_t message, WPARAM, LPARAM) {
+    w.setElseHandler([](uint32_t message, WPARAM, LPARAM lParam) {
         switch (message) {
+        case WM_GETMINMAXINFO:
+            MINMAXINFO* lpMMI;  // Minimum size
+            lpMMI = (MINMAXINFO*)lParam;
+            lpMMI->ptMinTrackSize.x = MIN_WIDTH;
+            lpMMI->ptMinTrackSize.y = MIN_HEIGHT;
+            return true;
         case WM_SETFOCUS:
             OnSetFocus();
             return true;
@@ -126,7 +135,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return false;
     });
     w.setExitCallback([]() {
-        timer.end();
+        timer->end();
         OnClose();
 
         // save user data
@@ -143,8 +152,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Initialize Lua environment and run script
     if (LuaInit())
     {
-        w.create(game_res, 600, 400, NULL, LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP)));
-        timer.begin(std::chrono::milliseconds(20), [] {
+        w.create(game_res, window_width, window_height, NULL,
+            LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP)));
+        timer = new Timer();
+        timer->begin(std::chrono::milliseconds(20), [] {
             w.refresh();
         });
     }

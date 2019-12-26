@@ -28,4 +28,7 @@
 #include <thread>
 #include <map>
 
+#define MIN_WIDTH 200
+#define MIN_HEIGHT 100
+
 #endif //PCH_H

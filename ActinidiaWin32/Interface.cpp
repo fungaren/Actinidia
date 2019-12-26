@@ -10,12 +10,8 @@
 #include "bass/bass.h"
 #pragma comment(lib, "bass/bass.lib")
 
-#define MIN_WIDTH 200
-#define MIN_HEIGHT 100
-size_t WIN_WIDTH = 1024;
-size_t WIN_HEIGHT = 768;
 lua_State* L = nullptr;
-extern ResourcePack pack;
+extern pResourcePack pack;
 extern Window w;
 extern bool bDirectMode;
 extern std::map<const std::string, std::string> user_data;
@@ -120,7 +116,7 @@ int GetText(lua_State *L)
         }
     }
     else
-        if (pack.readResource("./game/" + f, &p, &size))
+        if (pack->readResource("./game/" + f, &p, &size))
         {
             lua_pushlstring(L, p, size);
             return 1;
@@ -154,7 +150,7 @@ int GetImage(lua_State *L)
         }
     }
     else
-        if (pack.readResource("./game/" + f, &p, &size))
+        if (pack->readResource("./game/" + f, &p, &size))
         {
             try {
                 if (f.substr(f.size() - 3, 3) == "png")
@@ -203,7 +199,7 @@ int GetSound(lua_State *L)
         in.close();
     }
     else 
-        if (pack.readResource("./game/" + f, &p, &size))
+        if (pack->readResource("./game/" + f, &p, &size))
         {
             HSTREAM sound = BASS_StreamCreateFile(TRUE, p, 0, size,
                 b_loop ? BASS_SAMPLE_LOOP : 0);
@@ -439,12 +435,14 @@ bool LuaInit()
     lua_register(L, "GetSetting", GetSetting);
     lua_register(L, "SaveSetting", SaveSetting);
 
+    extern size_t window_width, window_height;
+
     // Load configure
     bool ok = false;
     char* p = nullptr;
     uint32_t size;
     std::ifstream in;
-    if (!bDirectMode && pack.readResource("./game/config.ini", &p, &size))
+    if (!bDirectMode && pack->readResource("./game/config.ini", &p, &size))
         ok = true;
     if (bDirectMode) {
         in.open("./game/config.ini", std::ios::binary);
@@ -470,20 +468,20 @@ bool LuaInit()
             size_t w_begin = 1 + conf_str.find('=', result);
             size_t w_end = conf_str.find('\n', w_begin);
             result = std::stoi(conf_str.substr(w_begin, w_end - w_begin));
-            if (result > MIN_WIDTH) WIN_WIDTH = result;
+            if (result > MIN_WIDTH) window_width = result;
         }
         result = conf_str.find("preferred_height", 0);
         if (result != std::string::npos) {
             size_t w_begin = 1 + conf_str.find('=', result);
             size_t w_end = conf_str.find('\n', w_begin);
             result = std::stoi(conf_str.substr(w_begin, w_end - w_begin));
-            if (result > MIN_HEIGHT) WIN_HEIGHT = result;
+            if (result > MIN_HEIGHT) window_height = result;
         }
         if (p) delete p;
     }
     ok = false;
     p = nullptr;
-    if (!bDirectMode && pack.readResource("./game/lua/main.lua", &p, &size))
+    if (!bDirectMode && pack->readResource("./game/lua/main.lua", &p, &size))
         ok = true;
     if (bDirectMode) {
         in.open("./game/lua/main.lua", std::ios::binary);
@@ -503,10 +501,10 @@ bool LuaInit()
         lua_pcall(L, 0, LUA_MULTRET, 0) == 0)
     {
         lua_getglobal(L, "core");
-        lua_pushinteger(L, WIN_WIDTH);
+        lua_pushinteger(L, window_width);
         lua_setfield(L, -2, "screenwidth");
         lua_getglobal(L, "core");
-        lua_pushinteger(L, WIN_HEIGHT);
+        lua_pushinteger(L, window_height);
         lua_setfield(L, -2, "screenheight");
 
         lua_getglobal(L, "OnCreate");

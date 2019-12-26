@@ -7,7 +7,7 @@ class Timer
     bool canceled;
     std::thread timer;
 public:
-    Timer() : canceled(false) {};
+    Timer() : canceled(true) {};
     void begin(std::chrono::milliseconds interval, std::function<void()> callback)
     {
         if (!canceled)

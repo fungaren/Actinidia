@@ -233,23 +233,23 @@ bool extractPack(const path& resFile) noexcept(false)
     return true;
 }
 
-ResourcePack ResourcePack::parsePack(const path& resFile) noexcept(false)
+pResourcePack ResourcePack::parsePack(const path& resFile) noexcept(false)
 {
     std::ifstream res(resFile, std::ios::binary);
     if (!res.good()) {
         std::runtime_error e("Can not open file");
         throw e;
     }
-    ResourcePack pack;
+    pResourcePack pack = new ResourcePack();
     ::parsePack(
         res,
         // new folder
         [](const path& relativePath) { },
         // new file: read into RAM
-        [&pack](std::istream& res, const path& relativePath, uint32_t dataSize) {
+        [pack](std::istream& res, const path& relativePath, uint32_t dataSize) {
             uint8_t* data = new uint8_t[dataSize];
             res.read((char*)data, dataSize);
-            pack.list.emplace_back(relativePath.u8string(), data, dataSize);
+            pack->list.emplace_back(relativePath.u8string(), data, dataSize);
         }
     );
 

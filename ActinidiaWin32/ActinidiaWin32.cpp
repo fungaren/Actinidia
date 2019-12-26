@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 #include "../Tools/Common/Window.h"
 #include "../Tools/Common/ResourcePack.h"
+#include "../Tools/Common/Timer.h"
+#include "resource.h"
 
 // callbacks
 bool LuaInit();
@@ -24,6 +26,7 @@ std::wstring user_data_path;
 std::map<const std::string, std::string> user_data;
 // GUI
 Window w;
+Timer timer;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -123,6 +126,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return false;
     });
     w.setExitCallback([]() {
+        timer.end();
         OnClose();
 
         // save user data
@@ -138,6 +142,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     
     // Initialize Lua environment and run script
     if (LuaInit())
-        w.create(L"demo");
+    {
+        w.create(game_res, 600, 400, NULL, LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP)));
+        timer.begin(std::chrono::milliseconds(20), [] {
+            w.refresh();
+        });
+    }
     return 0;
 }

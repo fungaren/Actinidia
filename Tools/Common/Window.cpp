@@ -64,7 +64,7 @@ LRESULT CALLBACK Window::dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARA
     return 0;
 }
 
-void Window::looper(HWND parent)
+void Window::looper(HWND parent, HICON icon)
 {
     HINSTANCE hInstance = GetModuleHandle(NULL);
     std::wstring wndClassName = title + L"cls";
@@ -75,12 +75,12 @@ void Window::looper(HWND parent)
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
     wcex.hInstance = hInstance;
-    wcex.hIcon = NULL;
+    wcex.hIcon = icon;
+    wcex.hIconSm = icon;
     wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = wndClassName.c_str();
-    wcex.hIconSm = NULL;
     RegisterClassExW(&wcex);
     this->hWnd = CreateWindowW(wndClassName.c_str(), title.c_str(), WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, 0, width, height, parent, NULL, hInstance, NULL);

@@ -10,7 +10,7 @@ class Window
 
 #ifdef _WIN32
     HWND hWnd;
-    void looper(HWND parent);
+    void looper(HWND parent, HICON icon);
 #endif /* _WIN32 */
 
 #ifdef _GTK
@@ -64,13 +64,13 @@ public:
     // If parent window is not set (default), Windows Messages will be take over.
     // Otherwise, you must call dispacher(...) manually in the parent WndProc.
     void create(const std::wstring& title, uint16_t width = 600, uint16_t height = 400,
-        HWND parent=NULL) {
+        HWND parent=NULL, HICON icon=NULL) {
         if (title.empty())
             return;
         this->title = title;
         this->width = width;
         this->height = height;
-        tWnd = std::thread(&Window::looper, this, parent);
+        tWnd = std::thread(&Window::looper, this, parent, icon);
     }
     static LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 #endif /* _WIN32 */

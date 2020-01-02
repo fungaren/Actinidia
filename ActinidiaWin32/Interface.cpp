@@ -248,7 +248,7 @@ int PasteToImageEx(lua_State *L)
     return 0;
 }
 
-// lua: void AlphaBlend(gDest, gSrc, xDest, yDest, SrcAlpha)
+// lua: void AlphaBlend(gDest, gSrc, xDest, yDest, Opacity)
 int AlphaBlend(lua_State *L)
 {
     int n = lua_gettop(L);
@@ -257,13 +257,13 @@ int AlphaBlend(lua_State *L)
     auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
     int xDest = (int)lua_tointeger(L, 3);
     int yDest = (int)lua_tointeger(L, 4);
-    unsigned char SrcAlpha = (unsigned char)lua_tointeger(L, 5);
+    unsigned char Opacity = (unsigned char)lua_tointeger(L, 5);
     lua_pop(L, 5);
-    PiCanvas::blend(gDest, gSrc, xDest, yDest, SrcAlpha);
+    PiCanvas::blend(gDest, gSrc, xDest, yDest, Opacity);
     return 0;
 }
 
-// lua: void AlphaBlendEx(gDest, gSrc, xDest, yDest, DestWidth, DestHeight, xSrc, ySrc, SrcWidth, SrcHeight, SrcAlpha)
+// lua: void AlphaBlendEx(gDest, gSrc, xDest, yDest, DestWidth, DestHeight, xSrc, ySrc, SrcWidth, SrcHeight, Opacity)
 int AlphaBlendEx(lua_State *L)
 {
     int n = lua_gettop(L);
@@ -278,10 +278,10 @@ int AlphaBlendEx(lua_State *L)
     int ySrc = (int)lua_tointeger(L, 8);
     int SrcWidth = (int)lua_tointeger(L, 9);
     int SrcHeight = (int)lua_tointeger(L, 10);
-    unsigned char SrcAlpha = (unsigned char)lua_tointeger(L, 11);
+    unsigned char Opacity = (unsigned char)lua_tointeger(L, 11);
     lua_pop(L, 11);
-    PiCanvas::blend(gDest, gSrc, xDest, DestWidth, DestHeight,
-        xSrc, ySrc, SrcWidth, SrcHeight, yDest, SrcAlpha);
+    PiCanvas::blend(gDest, gSrc, xDest, yDest, DestWidth, DestHeight,
+        xSrc, ySrc, SrcWidth, SrcHeight, Opacity);
     return 0;
 }
 

@@ -145,10 +145,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Initialize Lua environment and run script
     if (LuaInit())
     {
-        w.create(game_res, (uint16_t)window_width, (uint16_t)window_height, NULL,
+        RECT rc = { 0, 0, (LONG)window_width, (LONG)window_height };
+        AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+        // To create a window with specified size of client area.
+        w.create(game_res, (uint16_t)(rc.right - rc.left), (uint16_t)(rc.bottom - rc.top), NULL,
             LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP)));
         timer = new Timer();
-        timer->begin(std::chrono::milliseconds(20), [] {
+        timer->begin(std::chrono::milliseconds(17), [] {
             w.refresh();
         });
     }

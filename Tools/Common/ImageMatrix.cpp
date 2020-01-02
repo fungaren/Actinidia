@@ -14,6 +14,41 @@
 #pragma comment(lib, "zlib/zlibstatic.lib")
 #pragma comment(lib, "libjpeg/turbojpeg-static.lib")
 
+pImageMatrix ImageMatrixFactory::fromPixelData(uint32_t* data, uint16_t width, uint16_t height, bool ignoreAlpha)
+{
+    if (width == 0 || height == 0)
+        throw std::invalid_argument("width and height cannot be zero");
+
+    // allocate memory space for image matrix
+    uint32_t **table;
+    try {
+        table = new uint32_t*[height];
+    }
+    catch (std::bad_alloc e) {
+        throw std::runtime_error("Cannot allocate memory");
+    }
+    for (uint16_t y = 0; y < height; ++y) {
+        try {
+            table[y] = new uint32_t[width];
+        }
+        catch (std::bad_alloc e) {
+            while (y)
+                delete[] table[--y];
+            throw std::runtime_error("Cannot allocate memory");
+        }
+        uint32_t* p = table[y];
+        if (ignoreAlpha) {
+            for (uint16_t x = 0; x < width; ++x)
+                p[x] = data[y*width + x] | 0xFF000000;
+        }
+        else {
+            for (uint16_t x = 0; x < width; ++x)
+                p[x] = data[y*width + x];
+        }
+    }
+    return pImageMatrix(new ImageMatrix(table, width, height));
+}
+
 pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t height, uint32_t bkgrdColor)
 {
     if (width == 0 || height == 0)
@@ -36,8 +71,9 @@ pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t heig
                 delete[] table[--y];
             throw std::runtime_error("Cannot allocate memory");
         }
+        uint32_t* p = table[y];
         for (uint16_t x = 0; x < width; ++x)
-            table[y][x] = bkgrdColor;
+            p[x] = bkgrdColor;
     }
     return pImageMatrix(new ImageMatrix(table, width, height));
 }

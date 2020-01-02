@@ -259,7 +259,8 @@ void onImageConcatenate()
 
 void dragFiles(HDROP hDrop)
 {
-    TCHAR tempPath[MAX_PATH] = { '\0' };
+    TCHAR tempPath[MAX_PATH];
+    *tempPath = L'\0';
 
     UINT NumOfFiles = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, NULL);
     if (NumOfFiles == 1)
@@ -336,6 +337,138 @@ void dragFiles(HDROP hDrop)
 }
 
 //---------------------------------------------
+#include <set>
+const int char_width = 32, char_height = 32;
+TCHAR characters[4096], fontName[32];
+bool GenerateFontImage(int chars_per_line)
+{
+    TCHAR tempPath[MAX_PATH];
+    *tempPath = L'\0';
+    OPENFILENAME ofn;
+    ofn.lpstrFile = tempPath;
+    ofn.nMaxFile = sizeof(tempPath);
+    setOFN(ofn, L"PNG File (*.png)\0*.png\0\0", L"png");
+    if (GetSaveFileName(&ofn) <= 0)
+        return false;
+    std::set<wchar_t, std::less<>> charset;
+    for (TCHAR* i = characters; *i; i++)
+    {
+        charset.insert(*i);
+    }
+    int width = chars_per_line * char_width;
+    int height = char_height + (int)charset.size() / chars_per_line * char_height;
+    
+    HDC tdc = GetDC(hWnd);
+    HDC hdc = CreateCompatibleDC(NULL);
+    HBITMAP hbmp = CreateCompatibleBitmap(tdc, width, height);
+    HBITMAP hobmp = (HBITMAP)SelectObject(hdc, hbmp);
+    ReleaseDC(hWnd, tdc);
+
+    SetBkColor(hdc, Canvas::toABGR(0x00FFFFFF));
+    RECT rect{ 0, 0, width, height };
+    ExtTextOut(hdc, 0, 0, ETO_OPAQUE, &rect, NULL, 0, NULL);
+
+    HFONT fn = CreateFont(char_height, 0, 0, 0, 100, FALSE, FALSE, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS,
+        CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_SWISS, fontName);
+    HFONT oldfn = (HFONT)SelectObject(hdc, fn);
+    SetBkColor(hdc, 0x00FFFFFF);
+    SetTextColor(hdc, 0x00000000);
+    int x = 0, y = 0;
+    for (auto c : charset)
+    {
+        TextOut(hdc, x, y, &c, 1);
+        x += char_width;
+        if (x == width) {
+            x = 0;
+            y += char_height;
+        }
+    }
+    SelectObject(hdc, oldfn);
+    DeleteObject(fn);
+    DeleteObject(oldfn);
+
+    BITMAP bmpObj;
+    GetObject(hbmp, sizeof(BITMAP), &bmpObj);
+    BITMAPINFOHEADER bmpHead;
+    bmpHead.biBitCount = (WORD)(GetDeviceCaps(hdc, BITSPIXEL) * GetDeviceCaps(hdc, PLANES));
+    bmpHead.biCompression = BI_RGB;
+    bmpHead.biPlanes = 1;
+    bmpHead.biHeight = -bmpObj.bmHeight;
+    bmpHead.biWidth = bmpObj.bmWidth;
+    bmpHead.biSize = sizeof BITMAPINFOHEADER;
+    uint32_t* tmp = new uint32_t[width*height];
+    GetDIBits(hdc, hbmp, 0, bmpObj.bmHeight, tmp, (LPBITMAPINFO)&bmpHead, DIB_RGB_COLORS);
+
+    SelectObject(hdc, hobmp);
+    DeleteObject(hbmp);
+    DeleteObject(hobmp);
+    DeleteDC(hdc);
+
+    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, width, height, true);
+    ImageMatrixFactory::dumpPngFile(im, tempPath);
+    return true;
+}
+
+INT_PTR CALLBACK FontImg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+    case WM_INITDIALOG:
+        SendDlgItemMessage(hDlg, IDC_ALLCHARS, WM_SETTEXT, 0, (LPARAM)L"abcdefghijklmnopqrstuvwxyz1234567890,.:!");
+        SendDlgItemMessage(hDlg, IDC_CHARSPERLINE, WM_SETTEXT, 0, (LPARAM)L"12");
+        SendDlgItemMessage(hDlg, IDC_FONTFACE, WM_SETTEXT, 0, (LPARAM)L"Microsoft Yahei UI");
+        return (INT_PTR)TRUE;
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDC_CHOOSEFONT:
+        {
+            GetWindowText(GetDlgItem(hDlg, IDC_FONTFACE), fontName, sizeof fontName / sizeof TCHAR);
+            LOGFONT lf;
+            memset(&lf, 0, sizeof(LOGFONT));
+            lstrcpyn(lf.lfFaceName, fontName, sizeof lf.lfFaceName / sizeof TCHAR);
+            lf.lfHeight = char_height;
+            CHOOSEFONT cf;
+            memset(&cf, 0, sizeof(CHOOSEFONT));
+            cf.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT;
+            cf.lpLogFont = &lf;
+            cf.lStructSize = sizeof CHOOSEFONT;
+            if (ChooseFont(&cf) == TRUE)
+            {
+                SendDlgItemMessage(hDlg, IDC_FONTFACE, WM_SETTEXT, 0, (LPARAM)lf.lfFaceName);
+            }
+        }
+            return (INT_PTR)TRUE;
+            break;
+        case IDOK:
+        {
+            GetWindowText(GetDlgItem(hDlg, IDC_CHARSPERLINE), characters, sizeof characters / sizeof TCHAR);
+            int chars_per_line = _wtoi(characters);
+            if (chars_per_line == 0)
+            {
+                MessageBox(hDlg, L"Invalid number of chars per line.", L"ERROR", MB_ICONERROR);
+                break;
+            }
+            GetWindowText(GetDlgItem(hDlg, IDC_ALLCHARS), characters, sizeof characters / sizeof TCHAR);
+            GetWindowText(GetDlgItem(hDlg, IDC_FONTFACE), fontName, sizeof fontName / sizeof TCHAR);
+            if (GenerateFontImage(chars_per_line))
+                EndDialog(hDlg, LOWORD(wParam));
+        }
+            return (INT_PTR)TRUE;
+            break;
+        case IDCANCEL:
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+            break;
+        default:
+            break;
+        }
+    default:
+        return (INT_PTR)FALSE;
+    }
+}
+
+//---------------------------------------------
 #include "Common/Window.h"
 #include "Common/Timer.h"
 #include "Snake/Snake.h"
@@ -381,6 +514,9 @@ INT_PTR CALLBACK MainDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
             break;
         case IDC_IMGGLUING:
             onImageConcatenate();
+            break;
+        case IDC_FONTIMG:
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_FONTIMG), hWnd, FontImg);
             break;
         case IDOK:
             EndDialog(hDlg, LOWORD(wParam));

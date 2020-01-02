@@ -73,6 +73,8 @@ public:
         tWnd = std::thread(&Window::looper, this, parent, icon);
     }
     static LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+    // For some reason we need HWND
+    HWND getHWND() { return hWnd; }
 #endif /* _WIN32 */
 #ifdef _GTK
     void create(const std::wstring& title, uint16_t width = 600, uint16_t height = 400) {

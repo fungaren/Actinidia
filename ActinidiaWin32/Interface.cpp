@@ -353,7 +353,7 @@ int PlaySound(lua_State *L)
     return 0;
 }
 
-// lua: bool Screenshot(g), true for success
+// lua: bool Screenshot(), true for success
 int Screenshot(lua_State *L)
 {
     std::filesystem::create_directory("screenshot");
@@ -366,8 +366,36 @@ int Screenshot(lua_State *L)
     swprintf_s(szFileName, L"screenshot\\%d-%d-%d-%d-%d-%d_%d.png",
         SysTime.wYear, SysTime.wMonth, SysTime.wDay, SysTime.wHour, SysTime.wMinute, SysTime.wSecond, n_png++);
 
-    auto g = (ImageMatrix*)lua_tointeger(L, 1);
-    ImageMatrixFactory::dumpPngFile(g, szFileName);
+    HDC tdc = GetDC(w.getHWND());
+    HDC hdc = CreateCompatibleDC(NULL);
+    auto size = w.getSize();
+    HBITMAP hbmp = CreateCompatibleBitmap(tdc, size.first, size.second);
+    HBITMAP hobmp = (HBITMAP)SelectObject(hdc, hbmp);
+    // DO COPY
+    BitBlt(hdc, 0, 0, size.first, size.second, tdc, 0, 0, SRCCOPY);
+    ReleaseDC(w.getHWND(), tdc);
+
+    BITMAP bmpObj;
+    GetObject(hbmp, sizeof(BITMAP), &bmpObj);
+    BITMAPINFOHEADER bmpHead;
+    bmpHead.biBitCount = (WORD)(GetDeviceCaps(hdc, BITSPIXEL) * GetDeviceCaps(hdc, PLANES));
+    bmpHead.biCompression = BI_RGB;
+    bmpHead.biPlanes = 1;
+    bmpHead.biHeight = -bmpObj.bmHeight;
+    bmpHead.biWidth = bmpObj.bmWidth;
+    bmpHead.biSize = sizeof BITMAPINFOHEADER;
+    // READ PIXEL DATA
+    uint32_t* tmp = new uint32_t[bmpObj.bmWidth*bmpObj.bmHeight];
+    GetDIBits(hdc, hbmp, 0, bmpObj.bmHeight, tmp, (LPBITMAPINFO)&bmpHead, DIB_RGB_COLORS);
+
+    SelectObject(hdc, hobmp);
+    DeleteObject(hbmp);
+    DeleteObject(hobmp);
+    DeleteDC(hdc);
+
+    // DUMP TO FILE
+    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, bmpObj.bmWidth, bmpObj.bmHeight, true);
+    ImageMatrixFactory::dumpPngFile(im, szFileName);
 
     lua_pushboolean(L, true);
     return 1;

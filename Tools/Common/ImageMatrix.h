@@ -91,6 +91,8 @@ public:
             : addr(pImageRes), size(len) {}
     };
 
+    static pImageMatrix fromPixelData(uint32_t* data, uint16_t width, uint16_t height,
+        bool ignoreAlpha = false) noexcept(false);
     static pImageMatrix createBufferImage(uint16_t width, uint16_t height,
         uint32_t bkgrdColor = 0xFFFFFFFF) noexcept(false);
     static pImageMatrix fromPngFile(const char* pngFile) noexcept(false);

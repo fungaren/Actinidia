@@ -11,8 +11,8 @@
 
 #include "ImageMatrix.h"
 #pragma comment(lib, "libpng/libpng16.lib")
-#pragma comment(lib, "zlib/zlibstatic.lib")
-#pragma comment(lib, "libjpeg/turbojpeg-static.lib")
+#pragma comment(lib, "zlib/zlib.lib")
+#pragma comment(lib, "libjpeg/jpeg.lib")
 
 pImageMatrix ImageMatrixFactory::fromPixelData(uint32_t* data, uint16_t width, uint16_t height, bool ignoreAlpha)
 {

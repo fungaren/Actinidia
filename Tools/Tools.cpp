@@ -14,6 +14,7 @@ inline void disableButtons()
     EnableWindow(GetDlgItem(hWnd, IDC_PACK), FALSE);
     EnableWindow(GetDlgItem(hWnd, IDC_UNPACK), FALSE);
     EnableWindow(GetDlgItem(hWnd, IDC_IMGGLUING), FALSE);
+    EnableWindow(GetDlgItem(hWnd, IDC_FONTIMG), FALSE);
 }
 
 inline void enableButtons()
@@ -21,6 +22,7 @@ inline void enableButtons()
     EnableWindow(GetDlgItem(hWnd, IDC_PACK), TRUE);
     EnableWindow(GetDlgItem(hWnd, IDC_UNPACK), TRUE);
     EnableWindow(GetDlgItem(hWnd, IDC_IMGGLUING), TRUE);
+    EnableWindow(GetDlgItem(hWnd, IDC_FONTIMG), TRUE);
 }
 
 std::thread task;
@@ -221,12 +223,14 @@ void onUnpack()
 
 void onImageConcatenate()
 {
-    TCHAR tempPath[MAX_PATH * 100];     // max 100 files
+    // max 100 files
+    #define FILE_LIST_BUFFER_SIZE ((100 * (MAX_PATH + 1)) + 1)
+    wchar_t* tempPath = new wchar_t[FILE_LIST_BUFFER_SIZE];
     *tempPath = L'\0';
 
     OPENFILENAME ofn;
     ofn.lpstrFile = tempPath;
-    ofn.nMaxFile = sizeof(tempPath);
+    ofn.nMaxFile = FILE_LIST_BUFFER_SIZE;
     setOFN(ofn, L"Image File (*.jpg; *.png)\0*.jpg;*.png;*.jpeg\0\0", NULL);
     ofn.Flags |= OFN_ALLOWMULTISELECT;
 
@@ -255,6 +259,7 @@ void onImageConcatenate()
         return;
 
     deployImageContatenate(tempPath, file_list);
+    delete[] tempPath;
 }
 
 void dragFiles(HDROP hDrop)

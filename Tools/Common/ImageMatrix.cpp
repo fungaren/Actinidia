@@ -10,9 +10,15 @@
 */
 
 #include "ImageMatrix.h"
-#pragma comment(lib, "libpng/libpng16.lib")
-#pragma comment(lib, "zlib/zlib.lib")
-#pragma comment(lib, "libjpeg/jpeg.lib")
+#ifdef _DEBUG
+    #pragma comment(lib, "libpng/libpng16d.lib")
+    #pragma comment(lib, "zlib/zlibd.lib")
+    #pragma comment(lib, "libjpeg/jpegd.lib")
+#else
+    #pragma comment(lib, "libpng/libpng16.lib")
+    #pragma comment(lib, "zlib/zlib.lib")
+    #pragma comment(lib, "libjpeg/jpeg.lib")
+#endif
 
 pImageMatrix ImageMatrixFactory::fromPixelData(uint32_t* data, uint16_t width, uint16_t height, bool ignoreAlpha)
 {
@@ -439,6 +445,13 @@ pImageMatrix ImageMatrixFactory::fromJpegFile(const wchar_t* jpegFile)
     }
 }
 
+
+inline void _trace(std::wstring str) {
+#ifdef _DEBUG
+    OutputDebugString((str + L'\n').c_str());
+#endif
+}
+
 void ImageMatrixFactory::jpeg_error_exit(j_common_ptr cinfo) {
     _jpeg_error_mgr *myerr = (_jpeg_error_mgr*)cinfo->err;
     (*cinfo->err->output_message)(cinfo);
@@ -458,8 +471,12 @@ pImageMatrix ImageMatrixFactory::fromJpegFile(FILE *fp)
 
     /* Establish the setjmp return context for jpeg_error_exit to use. */
     if (setjmp(jerr.setjmp_buffer)) {
+        // fetch error string
+        char buffer[JMSG_LENGTH_MAX];
+        (cinfo.err->format_message) ((j_common_ptr)&cinfo, buffer);
+
         jpeg_destroy_decompress(&cinfo);
-        throw std::runtime_error("Failed to load image");
+        throw std::runtime_error(buffer);
     }
 
     /* Now we can initialize the JPEG decompression object. */
@@ -483,8 +500,12 @@ pImageMatrix ImageMatrixFactory::fromJpegBuffer(mem_image *mp)
 
     /* Establish the setjmp return context for my_error_exit to use. */
     if (setjmp(jerr.setjmp_buffer)) {
+        // fetch error string
+        char buffer[JMSG_LENGTH_MAX];
+        (cinfo.err->format_message) ((j_common_ptr)&cinfo, buffer);
+
         jpeg_destroy_decompress(&cinfo);
-        throw std::runtime_error("Failed to load image");
+        throw std::runtime_error(buffer);
     }
     /* Now we can initialize the JPEG decompression object. */
     jpeg_create_decompress(&cinfo);

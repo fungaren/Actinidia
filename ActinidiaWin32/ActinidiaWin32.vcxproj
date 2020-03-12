@@ -171,6 +171,7 @@
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Tools\Common\Compress.cpp" />
     <ClCompile Include="..\Tools\Common\GdiCanvas.cpp" />
     <ClCompile Include="..\Tools\Common\ImageMatrix.cpp" />
     <ClCompile Include="..\Tools\Common\PlatformIndependentCanvas.cpp" />

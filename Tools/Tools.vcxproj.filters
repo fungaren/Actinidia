@@ -56,6 +56,9 @@
     <ClCompile Include="Snake\Snake.cpp">
       <Filter>Snake</Filter>
     </ClCompile>
+    <ClCompile Include="Common\Compress.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Tools.rc">

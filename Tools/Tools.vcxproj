@@ -170,6 +170,7 @@
     <ClInclude Include="Snake\Snake.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Common\Compress.cpp" />
     <ClCompile Include="Common\GdiCanvas.cpp" />
     <ClCompile Include="Common\ImageMatrix.cpp" />
     <ClCompile Include="Common\PlatformIndependentCanvas.cpp" />

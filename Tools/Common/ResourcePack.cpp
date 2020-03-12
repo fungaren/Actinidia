@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ResourcePack.h"
+#include "Compress.h"
 
 inline void _trace(std::wstring str) {
 #ifdef _DEBUG
@@ -93,17 +94,11 @@ bool generatePack(const std::string& destFile,
     const walk_result_t& queue,
     std::function<void(size_t filesize)> update_progress)
 {
-    std::ofstream dst(destFile, std::ios::binary);
-    if (!dst) {
-        char error_str[1024];
-        strerror_s(error_str, sizeof error_str, errno);
-        std::cerr << error_str << '\n';
-        return false;
-    }
-    dst << MAGIC; // Magic
+    std::stringstream buffer;
+    buffer << MAGIC; // Magic
     for (auto& t : queue) {
-        dst.write((char*)&std::get<0>(t), sizeof entity); // Entity
-        dst << std::get<1>(t); // Name
+        buffer.write((char*)&std::get<0>(t), sizeof entity); // Entity
+        buffer << std::get<1>(t); // Name
         if (std::get<2>(t).has_value())
         {
             std::ifstream p(std::get<2>(t).value(), std::ios::binary); // Input stream
@@ -113,9 +108,22 @@ bool generatePack(const std::string& destFile,
             if (pos != 0)
             {
                 p.seekg(0, std::ios::beg);
-                dst << p.rdbuf(); // Data
+                buffer << p.rdbuf(); // Data
             }
         }
+    }
+    std::ofstream dst(destFile, std::ios::binary);
+    if (!dst) {
+        char error_str[1024];
+        strerror_s(error_str, sizeof error_str, errno);
+        std::cerr << error_str << '\n';
+        return false;
+    }
+    int result = compress(buffer, dst, 9);
+    if (result != 0)
+    {
+        _trace(zerrw(result));
+        return false;
     }
     return true;
 }
@@ -222,9 +230,16 @@ bool extractPack(const path& resFile) noexcept(false)
         std::runtime_error e("Can not open file");
         throw e;
     }
+    std::stringstream buffer;
+    int result = decompress(res, buffer);
+    if (result != 0)
+    {
+        _trace(zerrw(result));
+        return false;
+    }
     try {
         parsePack(
-            res,
+            buffer,
             // new folder: create folder
             [&folder_path](const path& relativePath) {
                 create_directory(folder_path / relativePath);
@@ -257,9 +272,16 @@ pResourcePack ResourcePack::parsePack(const path& resFile) noexcept(false)
         std::runtime_error e("Can not open file");
         throw e;
     }
+    std::stringstream buffer;
+    int result = decompress(res, buffer);
+    if (result != 0)
+    {
+        std::runtime_error e(zerr(result));
+        throw e;
+    }
     pResourcePack pack = new ResourcePack();
     ::parsePack(
-        res,
+        buffer,
         // new folder
         [](const path& relativePath) { },
         // new file: read into RAM

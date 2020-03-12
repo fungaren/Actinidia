@@ -50,6 +50,9 @@
     <ClCompile Include="Interface.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\Tools\Common\Compress.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ActinidiaWin32.rc">

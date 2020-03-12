@@ -50,7 +50,7 @@ class Window
     }
 
 public:
-    Window() {}
+    Window():width(0),height(0) {}
     Window(Window&) = delete;
     Window(Window&& w) = delete;
     void operator=(Window&) = delete;

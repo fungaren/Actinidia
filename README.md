@@ -19,9 +19,10 @@ Run game scripts.
 
 ### [Tools](Tools)
 
-- Pack resources to `res.pack` file
-- Unpack a `res.pack` file
+- Pack resources to `.res` file. Note that file name start with a dot (`.`) will be skipped.
+- Unpack a `.res` file
 - Concatenate some images to a long image
+- Generate a large image with characters in a specified fontface
 
 ## How to build games
 

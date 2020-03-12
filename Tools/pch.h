@@ -3,6 +3,7 @@
 
 #include <SDKDDKVer.h>
 #include <windows.h>
+#include <Commctrl.h>
 #undef max
 
 #if defined _M_IX86

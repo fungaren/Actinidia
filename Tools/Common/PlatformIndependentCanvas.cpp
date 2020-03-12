@@ -244,7 +244,7 @@ void PlatformIndependenceCanvas::blend(pImageMatrix imDest, const pImageMatrix i
     int yRange, yStart;
     if (yDest < 0) {
         yRange = yDest + destHeight > imDest->getHeight() ? imDest->getHeight() : yDest + destHeight;
-        yStart = -yDest;
+        yStart = (srcHeight == destHeight) ? -yDest : (-yDest) * srcHeight / destHeight;
         yDest = 0;
     }
     else {
@@ -255,7 +255,7 @@ void PlatformIndependenceCanvas::blend(pImageMatrix imDest, const pImageMatrix i
     int xRange, xStart;
     if (xDest < 0) {
         xRange = xDest + destWidth > imDest->getWidth() ? imDest->getWidth() : xDest + destWidth;
-        xStart = -xDest;
+        xStart = (srcWidth == destWidth) ? -xDest : (-xDest) * srcWidth / destWidth;
         xDest = 0;
     }
     else {

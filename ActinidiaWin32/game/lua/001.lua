@@ -7,26 +7,26 @@ local current = {}
 ======================================================]]
 
 function current.OnCreate()
-	logo = GetImage("actinidia.png")
-	return ""
+    logo = GetImage("actinidia.png")
+    return ""
 end
 
 -- if need change map, return new map name
 function current.OnPaint(WndGraphic)
-	g= CreateImageEx(core.screenwidth,core.screenheight, 0xFFFFFFFF)
-	
-	local x = core.screenwidth - GetWidth(logo)
-	local y = core.screenheight - GetHeight(logo)
-	PasteToImage(g, logo, 0, 0)
-	-- TODO: Add your code here.
+    g= CreateImageEx(core.screenwidth,core.screenheight, 0xFFFFFFFF)
+    
+    local x = core.screenwidth - GetWidth(logo)
+    local y = core.screenheight - GetHeight(logo)
+    PasteToImage(g, logo, x//2, y//2)
+    -- TODO: Add your code here.
 
-	PasteToWnd(WndGraphic,g)
-	DeleteImage(g)
-	return ""
+    PasteToWnd(WndGraphic,g)
+    DeleteImage(g)
+    return ""
 end
 
 function current.OnClose()
-	DeleteImage(logo)
+    DeleteImage(logo)
 end
 
 function current.OnKeyDown(nChar)
@@ -46,7 +46,7 @@ function current.OnLButtonUp(x,y)
 end
 
 function current.OnMouseMove(x,y)
-	
+    
 end
 
 function current.OnSetFocus()
@@ -58,7 +58,7 @@ function current.OnKillFocus()
 end
 
 function current.OnMouseWheel(zDeta,x,y)
-	
+    
 end
 
 return current

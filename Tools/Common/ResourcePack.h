@@ -1,4 +1,8 @@
 #pragma once
+#include <optional>
+#include <fstream>
+#include <sstream>
+#include <queue>
 
 /*
     resource package format:
@@ -25,7 +29,11 @@ struct entity {
                         // do not support filesize > 4GB
 };
 
-bool generatePack(const std::string& destFile, const std::filesystem::path& resDirectory);
+typedef std::list<std::tuple<entity, std::string, std::optional<std::filesystem::path>>> walk_result_t;
+walk_result_t walkFolder(const std::filesystem::path& resDirectory);
+bool generatePack(const std::string& destFile,
+    const walk_result_t& queue,
+    std::function<void(size_t)> update_progress);
 bool extractPack(const std::filesystem::path& resFile);
 
 /*

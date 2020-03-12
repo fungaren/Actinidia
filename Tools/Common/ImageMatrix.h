@@ -31,11 +31,11 @@ public:
     ImageMatrix()
         : matrix(nullptr), width(0), height(0) {}
     ImageMatrix(ImageMatrix&) = delete;
-    ImageMatrix(ImageMatrix&& src) 
+    ImageMatrix(ImageMatrix&& src) noexcept
         : matrix(src.matrix), width(src.width), height(src.height) {
         src.matrix = nullptr;
     }
-    void operator=(ImageMatrix&& src) {
+    void operator=(ImageMatrix&& src) noexcept {
         ImageMatrix::~ImageMatrix();
         width = src.width;
         height = src.height;

@@ -1,8 +1,5 @@
 #include "pch.h"
 #include "ResourcePack.h"
-#include <fstream>
-#include <sstream>
-#include <queue>
 
 inline void _trace(std::wstring str) {
 #ifdef _DEBUG
@@ -12,25 +9,25 @@ inline void _trace(std::wstring str) {
 
 using namespace std::filesystem;
 
-bool generatePack(const std::string& destFile, const path& resDirectory)
+walk_result_t walkFolder(const path& resDirectory)
 {
     std::vector<path> folder_path = { resDirectory };
     // store meta info to be output
-    std::list<std::tuple<entity, std::string, std::ifstream*>> queue;
+    walk_result_t queue;
     // store iterator of parent folder
-    std::vector<std::pair<directory_iterator, decltype(queue)::iterator>> parent_iterator;
+    std::vector<std::pair<directory_iterator, walk_result_t::iterator>> parent_iterator;
 
     directory_iterator i;
     uint8_t depth = 0;
 recursive:
-    // enter the directory
-    std::string foldername = folder_path.back().filename().u8string();
+    // enter the directory, and the root directory is always "game"
+    std::string foldername = (depth == 0) ? "game" : folder_path.back().filename().u8string();
     i = directory_iterator(folder_path.back());
 
     // write entity + file name
     entity e{ TYPE_FOLDER, 0, (uint16_t)foldername.size(), 0 };
-    // store
-    queue.push_back({ e, foldername, nullptr });
+    // store directory_iterator
+    queue.push_back({ e, foldername, std::nullopt });
     parent_iterator.push_back({ i,--queue.end() });
 
     ++depth;
@@ -38,11 +35,15 @@ recursive:
     // walk the directory
     while(i != directory_iterator())
     {
-        if (depth == 255)
-            return false;       // not support depth > 255
+        if (depth == 64)
+            return queue;       // not support depth > 64
 
         if (i->is_directory())
         {
+            if (static_cast<path>(*i).filename().wstring().front() == L'.') {
+                ++i; // skip hidden folder (eg., .git)
+                continue;
+            }
             _trace(static_cast<path>(*i).filename());
             folder_path.push_back(*i);
             goto recursive;
@@ -58,16 +59,20 @@ recursive:
         }
         else if (i->is_regular_file())
         {
-            _trace(static_cast<path>(*i).filename());
-            
+            path _filename = static_cast<path>(*i).filename();
+            if (_filename.wstring().front() == L'.') {
+                ++i; // skip hidden folder (eg., .git)
+                continue;
+            }
+            _trace(_filename);
             // get utf-8 encoded file name
-            std::string filename = static_cast<path>(*i).filename().u8string();
+            std::string filename = _filename.u8string();
             uint32_t file_size = (uint32_t)i->file_size();
             uint16_t name_size = (uint16_t)filename.size();
 
             // write entity + file name + data
             entity e{ TYPE_FILE, 0, name_size, file_size };
-            queue.push_back({ e, filename, new std::ifstream(*i, std::ios::binary) });
+            queue.push_back({ e, filename, static_cast<path>(*i) });
 
             // update parent folder size
             auto h = parent_iterator.rbegin()->second;
@@ -81,23 +86,35 @@ recursive:
         --depth;
         goto resume;
     }
+    return queue;
+}
 
+bool generatePack(const std::string& destFile,
+    const walk_result_t& queue,
+    std::function<void(size_t filesize)> update_progress)
+{
     std::ofstream dst(destFile, std::ios::binary);
+    if (!dst) {
+        char error_str[1024];
+        strerror_s(error_str, sizeof error_str, errno);
+        std::cerr << error_str << '\n';
+        return false;
+    }
     dst << MAGIC; // Magic
     for (auto& t : queue) {
         dst.write((char*)&std::get<0>(t), sizeof entity); // Entity
         dst << std::get<1>(t); // Name
-        auto p = std::get<2>(t);
-        if (p)
+        if (std::get<2>(t).has_value())
         {
-            p->seekg(0, std::ios::end);
-            std::streampos pos = p->tellg();
+            std::ifstream p(std::get<2>(t).value(), std::ios::binary); // Input stream
+            p.seekg(0, std::ios::end);
+            std::streampos pos = p.tellg(); // get file size
+            update_progress(pos); // the callback update packing progress
             if (pos != 0)
             {
-                p->seekg(0, std::ios::beg);
-                dst << p->rdbuf(); // Data
+                p.seekg(0, std::ios::beg);
+                dst << p.rdbuf(); // Data
             }
-            delete p;
         }
     }
     return true;
@@ -123,7 +140,7 @@ void parsePack(std::istream& res,
         res.read((char*)&e, sizeof(entity));
 
         // read name
-        char* name = new char[e.nameSize + 1];
+        char* name = new char[(size_t)e.nameSize + 1];
         res.read(name, e.nameSize);
         name[e.nameSize] = '\0';
         try {

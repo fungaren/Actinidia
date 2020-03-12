@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "resource.h"
 #include "Common/Canvas.h"
+#include "Common/ResourcePack.h"
 
 // HWND of the dialog
 HWND hWnd = NULL;
@@ -36,7 +37,20 @@ void deployPack(const std::wstring& destFile, const path& resDirectory)
     disableButtons();
     if (task.joinable()) task.join();
     task = std::thread([=]() {
-        if (generatePack(path(destFile).u8string(), resDirectory))
+        auto&& queue = walkFolder(resDirectory);
+        HWND hwndPB = GetDlgItem(hWnd, IDC_PROGRESS);
+        size_t cb = std::get<0>(queue.front()).dataSize;
+        size_t count = 0;
+        SendMessage(hwndPB, PBM_SETRANGE, 0, MAKELPARAM(0, cb / 2048)); // range(0, cb/2KB)
+        SendMessage(hwndPB, PBM_SETSTEP, (WPARAM)1, 0); // step 1 => 2KB
+        if (generatePack(path(destFile).u8string(), queue,
+            [hwndPB, &count](size_t filesize) {
+                count += filesize;
+                while (count > 2048) {
+                    count -= 2048;
+                    SendMessage(hwndPB, PBM_STEPIT, 0, 0); // update progress bar
+                }
+            }))
             userClosed ? 0 : SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0,
             (LPARAM)L"The resource file was successfully generated.");
         else
@@ -109,9 +123,17 @@ bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstr
     return true;
 }
 
-void deployImageContatenate(const std::wstring& destImage, const std::vector<std::wstring>& imgFiles)
+void deployImageContatenate(const std::wstring& destImage, std::vector<std::wstring>& imgFiles)
 {
     SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0, (LPARAM)L"Concatenating...");
+    // sort files by their names
+    std::sort(imgFiles.begin(), imgFiles.end(), [](const std::wstring& a, const std::wstring& b) -> bool{
+        size_t p1 = a.rfind(L'\\');
+        std::wstring n1 = (p1 == std::wstring::npos ? a : a.substr(p1 + 1));
+        size_t p2 = b.rfind(L'\\');
+        std::wstring n2 = (p2 == std::wstring::npos ? b : b.substr(p2 + 1));
+        return n1.compare(n2) < 0;
+    });
     disableButtons();
     if (task.joinable()) task.join();
     task = std::thread([](const std::wstring& destImage, const std::vector<std::wstring>& imgFiles) {
@@ -401,7 +423,7 @@ bool GenerateFontImage(int chars_per_line)
     bmpHead.biHeight = -bmpObj.bmHeight;
     bmpHead.biWidth = bmpObj.bmWidth;
     bmpHead.biSize = sizeof BITMAPINFOHEADER;
-    uint32_t* tmp = new uint32_t[width*height];
+    uint32_t* tmp = new uint32_t[(size_t)width*height];
     GetDIBits(hdc, hbmp, 0, bmpObj.bmHeight, tmp, (LPBITMAPINFO)&bmpHead, DIB_RGB_COLORS);
 
     SelectObject(hdc, hobmp);
@@ -431,7 +453,7 @@ INT_PTR CALLBACK FontImg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             GetWindowText(GetDlgItem(hDlg, IDC_FONTFACE), fontName, sizeof fontName / sizeof TCHAR);
             LOGFONT lf;
             memset(&lf, 0, sizeof(LOGFONT));
-            lstrcpyn(lf.lfFaceName, fontName, sizeof lf.lfFaceName / sizeof TCHAR);
+            (void)lstrcpyn(lf.lfFaceName, fontName, sizeof lf.lfFaceName / sizeof TCHAR);
             lf.lfHeight = char_height;
             CHOOSEFONT cf;
             memset(&cf, 0, sizeof(CHOOSEFONT));

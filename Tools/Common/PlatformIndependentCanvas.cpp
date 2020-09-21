@@ -1,4 +1,18 @@
-#include "pch.h"
+#ifdef _WIN32
+    #include "pch.h"
+#endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <future>
+#include <chrono>
+#include <fstream>
+#include <experimental/filesystem>
+#include <thread>
+#include <map>
 #include "ImageMatrix.h"
 #include "Canvas.h"
 

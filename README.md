@@ -27,3 +27,27 @@ Run game scripts.
 ## How to build games
 
 See [*ActinidiaGames*](https://github.com/mooction/ActinidiaGames).
+
+## Build instructions
+
+This program support both Windows and Linux. 
+
+### Windows
+
+Visual Studio 2017 or newer is required.
+
+### Linux 
+
+Install dependent libraries:
+
+```bash
+sudo apt-get install -y libgtk-3-dev zlib1g-dev libpng-dev libjpeg-dev
+```
+
+Clone this repository and build:
+
+```bash
+git clone https://github.com/mooction/actinidia
+cd actinidia
+make
+```

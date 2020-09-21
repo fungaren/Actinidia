@@ -5,6 +5,7 @@
 extern "C" {
 #include "../libjpeg/jpeglib.h"
 }
+#include <cstdint>
 
 class Matrix {
 protected:
@@ -36,7 +37,7 @@ public:
         src.matrix = nullptr;
     }
     void operator=(ImageMatrix&& src) noexcept {
-        ImageMatrix::~ImageMatrix();
+        this->~ImageMatrix();
         width = src.width;
         height = src.height;
         matrix = src.matrix;
@@ -88,7 +89,7 @@ public:
         size_t has_read = 8;
         void* addr;
         mem_image(void* pImageRes, size_t len)
-            : addr(pImageRes), size(len) {}
+            : size(len), addr(pImageRes) {}
     };
 
     static pImageMatrix fromPixelData(uint32_t* data, uint16_t width, uint16_t height,
@@ -104,7 +105,10 @@ public:
     }
 #ifdef _WIN32
     static pImageMatrix fromPngResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
-#endif
+#endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
 
     static pImageMatrix fromJpegFile(const char* jpegFile) noexcept(false);
     static pImageMatrix fromJpegFile(const wchar_t* jpegFile) noexcept(false);
@@ -115,10 +119,13 @@ public:
     }
 #ifdef _WIN32
     static pImageMatrix fromJpegResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
-#endif
-    /// <summary>
-    /// @param quality range [1,100]
-    /// </summary>
+#endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
+    /**
+     * @param quality range [1,100]
+     */
     static void dumpJpegFile(const pImageMatrix im, const char* filePath, uint8_t quality = 80) noexcept(false);
     static void dumpJpegFile(const pImageMatrix im, const wchar_t* filePath, uint8_t quality = 80) noexcept(false);
     static void dumpPngFile(const pImageMatrix im, const char* filePath) noexcept(false);

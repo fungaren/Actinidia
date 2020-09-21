@@ -1,8 +1,10 @@
-#include "pch.h"
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #include "Window.h"
 
 #ifdef _WIN32
-
+#include "pch.h"
 #include <map>
 std::map<HWND, const Window*> callbackSource;
 
@@ -135,7 +137,7 @@ std::pair<int, int> Window::getSize() const
     return { rc.right - rc.left, rc.bottom - rc.top };
 }
 
-#if 0
+#ifdef UNIT_TEST
 #if defined _M_IX86
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls'"\
 " version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -160,11 +162,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     Window w;
     w.create(L"demo");
 }
-#endif /* 0 */
+#endif /* UNIT_TEST */
 
 #endif /* _WIN32 */
-
 #ifdef _GTK
+#include <gtk/gtk.h>
+
+#ifdef UNIT_TEST
+static void
+activate (GtkApplication* app,
+          gpointer        user_data)
+{
+    GtkWidget *window;
+
+    window = gtk_application_window_new (app);
+    gtk_window_set_title (GTK_WINDOW (window), "Window");
+    gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
+    gtk_widget_show_all (window);
+}
 
 void Window::looper()
 {
@@ -176,4 +191,17 @@ void Window::refresh()
 
 }
 
+int main(int argc, char* argv[])
+{
+    GtkApplication *app;
+    int status;
+
+    app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
+    g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+    status = g_application_run (G_APPLICATION (app), argc, argv);
+    g_object_unref (app);
+
+    return status;
+}
+#endif /* UNIT_TEST */
 #endif /* _GTK */

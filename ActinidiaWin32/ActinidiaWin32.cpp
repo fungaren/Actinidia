@@ -1,4 +1,22 @@
-﻿#include "pch.h"
+﻿#ifdef _WIN32
+    #include "pch.h"
+#endif /* _WIN32 */
+#ifdef _GTK
+    
+#endif
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <future>
+#include <chrono>
+#include <fstream>
+#include <experimental/filesystem>
+#include <thread>
+#include <map>
+
+#define MIN_WIDTH 200
+#define MIN_HEIGHT 100
+
 #include "../Tools/Common/Window.h"
 #include "../Tools/Common/ResourcePack.h"
 #include "../Tools/Common/Timer.h"

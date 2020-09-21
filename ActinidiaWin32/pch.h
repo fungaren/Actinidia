@@ -18,17 +18,4 @@
 " version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #endif
 
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <future>
-#include <chrono>
-#include <fstream>
-#include <filesystem>
-#include <thread>
-#include <map>
-
-#define MIN_WIDTH 200
-#define MIN_HEIGHT 100
-
 #endif //PCH_H

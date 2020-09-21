@@ -1,5 +1,19 @@
-#include "pch.h"
-#undef PlaySound 
+#ifdef _WIN32
+    #include "pch.h"
+    #undef PlaySound 
+#endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <future>
+#include <chrono>
+#include <fstream>
+#include <experimental/filesystem>
+#include <thread>
+#include <map>
 #include "../Tools/Common/Window.h"
 #include "../Tools/Common/Canvas.h"
 #include "../Tools/Common/ImageMatrix.h"

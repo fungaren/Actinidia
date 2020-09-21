@@ -1,5 +1,7 @@
 #pragma once
 #include "Canvas.h"
+#include <thread>
+#include <functional>
 
 class Window
 {
@@ -12,7 +14,6 @@ class Window
     HWND hWnd;
     void looper(HWND parent, HICON icon);
 #endif /* _WIN32 */
-
 #ifdef _GTK
     void looper();
 #endif /* _GTK */
@@ -43,7 +44,9 @@ class Window
     // ret bool: indicate whether any message handled
     std::function<bool(uint32_t, WPARAM, LPARAM)> onElse = [](uint32_t, WPARAM, LPARAM) { return false; };
 #endif /* _WIN32 */
+#ifdef _GTK
 
+#endif /* _GTK */
     void isRunning() {
         if (tWnd.joinable())
             throw std::runtime_error("Cannot set handler when the window is running");
@@ -120,6 +123,9 @@ public:
     template <typename T>
     void setElseHandler(T&& handler)        { isRunning(); onElse = handler; }
 #endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
 
     auto& getKeyDownHandler() const         { return onKeyDown; }
     auto& getKeyUpHandler() const           { return onKeyUp; }
@@ -134,4 +140,7 @@ public:
 #ifdef _WIN32
     auto& getElseHandler() const            { return onElse; }
 #endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include "ImageMatrix.h"
+#include <string>
 
 class Canvas
 {
@@ -37,10 +38,18 @@ public:
     }
 
     enum LineStyle {
+#ifdef _WIN32
         solid   = PS_SOLID,
         dashed  = PS_DASH,
         dotted  = PS_DOT,
         none    = PS_NULL
+#endif /* _WIN32 */
+#ifdef _GTK
+        solid,
+        dashed,
+        dotted,
+        none
+#endif /* _WIN32 */
     };
 
     /// <summary>
@@ -157,16 +166,70 @@ public:
     void rectangle(int left, int top, int right, int bottom,
         LineStyle ls = LineStyle::solid, color lineColor = Constant::black) const;
 
-    ///<summary>
-    /// Do not support alpha blend. The alpha channel will be discard.
-    ///</summary>
+    // Do not support alpha blend. The alpha channel will be discard.
     void paste(const pImageMatrix imSrc, int xDest, int yDest) const;
 
-    ///<summary>
-    /// Do not support alpha blend. The alpha channel will be discard.
-    ///</summary>
+    // Do not support alpha blend. The alpha channel will be discard.
     void paste(const pImageMatrix imSrc,
         int xDest, int yDest, int destWidth, int destHeight,
         int xSrc, int ySrc, int srcWidth, int srcHeight) const;
 };
-#endif
+#endif /* _WIN32 */
+#ifdef _GTK
+class GdiCanvas : Canvas
+{
+private:
+
+
+public:
+
+    GdiCanvas()
+    { }
+
+
+    GdiCanvas(GdiCanvas&) = delete;
+
+    ~GdiCanvas() {
+        
+    }
+
+    void fillSolidRect(int left, int top, int right, int bottom, color fillColor) const;
+
+    //const unsigned int format = DT_NOPREFIX | DT_WORDBREAK | DT_EDITCONTROL | DT_NOCLIP | DT_HIDEPREFIX;
+    //// calc expected height for specific text width
+    //int calcHeight(const std::wstring& str, int width)
+    //{
+    //  RECT rc = { 0,0,width,0 };
+    //  DrawTextW(hdc, str.c_str(), str.length(), &rc, format | DT_CALCRECT);
+    //  return rc.bottom - rc.top;
+    //}
+
+    //Font& drawText(const std::wstring& str, int left, int top, int width, int height) {
+    //  RECT rc = { left, top, left + width, top + height };
+
+    //  SetBkMode(hdc, TRANSPARENT);
+    //  SetTextColor(hdc, color);
+
+    //  DrawTextW(hdc, str.c_str(), str.length(), &rc, format);
+    //  return *this;
+    //}
+
+    bool printText(int x, int y, std::wstring str, uint16_t len,
+        std::wstring fontName, uint8_t fontSize, color fontColor = Constant::black, 
+        CharStyle style = Constant::style_default) const;
+
+    void drawLine(int x1, int y1, int x2, int y2,
+        LineStyle ls = LineStyle::solid, color lineColor = Constant::black) const;
+
+    void rectangle(int left, int top, int right, int bottom,
+        LineStyle ls = LineStyle::solid, color lineColor = Constant::black) const;
+
+    // Do not support alpha blend. The alpha channel will be discard.
+    void paste(const pImageMatrix imSrc, int xDest, int yDest) const;
+
+    // Do not support alpha blend. The alpha channel will be discard.
+    void paste(const pImageMatrix imSrc,
+        int xDest, int yDest, int destWidth, int destHeight,
+        int xSrc, int ySrc, int srcWidth, int srcHeight) const;
+};
+#endif /* _GTK */

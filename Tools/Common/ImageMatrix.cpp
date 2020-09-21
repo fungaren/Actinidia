@@ -1,4 +1,18 @@
-#include "pch.h"
+#ifdef _WIN32
+    #include "pch.h"
+#endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <future>
+#include <chrono>
+#include <fstream>
+#include <experimental/filesystem>
+#include <thread>
+#include <map>
 // Add code below to pch.h and set C++ standard to 17
 /*
 #include <Windows.h>
@@ -198,7 +212,10 @@ pImageMatrix ImageMatrixFactory::fromPngResource(UINT nResID, LPCTSTR lpType, HM
         throw e;
     }
 }
-#endif
+#endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
 
 void ImageMatrixFactory::png_read_data_fn(png_structp png_ptr, png_bytep dest, png_size_t length)
 {
@@ -544,7 +561,10 @@ pImageMatrix ImageMatrixFactory::fromJpegResource(UINT nResID, LPCTSTR lpType, H
         throw e;
     }
 }
-#endif
+#endif /* _WIN32 */
+#ifdef _GTK
+
+#endif /* _GTK */
 
 pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jpeg_error_mgr& jerr)
 {

@@ -260,3 +260,6 @@ paket-files/
 __pycache__/
 *.pyc
 /Host/Assets
+
+# Visual Studio Code
+.vscode

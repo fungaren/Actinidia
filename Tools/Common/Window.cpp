@@ -1,10 +1,15 @@
 /*
  * Copyright (c) 2020, FANG All rights reserved.
  */
+#ifdef _WIN32
+    #include "pch.h"
+#endif /* _WIN32 */
+#ifdef _GTK
+    #include <gtk/gtk.h>
+#endif /* _GTK */
 #include "Window.h"
 
 #ifdef _WIN32
-#include "pch.h"
 #include <map>
 std::map<HWND, const Window*> callbackSource;
 
@@ -166,42 +171,85 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 #endif /* _WIN32 */
 #ifdef _GTK
-#include <gtk/gtk.h>
 
-#ifdef UNIT_TEST
-static void
-activate (GtkApplication* app,
-          gpointer        user_data)
+void activate(GtkApplication* app, gpointer user_data)
 {
-    GtkWidget *window;
-
-    window = gtk_application_window_new (app);
-    gtk_window_set_title (GTK_WINDOW (window), "Window");
-    gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
-    gtk_widget_show_all (window);
+    Window *w = (Window *)user_data;
+    w->wnd = gtk_application_window_new(app);
+    int width, height;
+    std::tie(width, height) = w->getSize();
+    gtk_window_set_default_size(GTK_WINDOW(w->wnd), width, height);
+    gtk_window_set_title(GTK_WINDOW(w->wnd), w->utf8(w->title));
+    gtk_widget_show_all(w->wnd);
 }
 
 void Window::looper()
 {
-
+    app = gtk_application_new("cc.moooc.window", G_APPLICATION_FLAGS_NONE);
+    g_signal_connect(app, "activate", G_CALLBACK(activate), this);
+    g_application_run(G_APPLICATION(app), argc, argv);
+    g_object_unref(app);
 }
 
 void Window::refresh()
 {
-
+    int w, h;
+    gtk_window_get_size(GTK_WINDOW(wnd), &w, &h);
+    gtk_widget_queue_draw_area(wnd, 0, 0, w, h);
 }
 
+void Window::alert(const char* str, const char* title, MessageType type)
+{
+    GtkDialogFlags flags = GTK_DIALOG_DESTROY_WITH_PARENT;
+    GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(wnd),
+                                    flags,
+                                    (GtkMessageType)type,
+                                    GTK_BUTTONS_CLOSE,
+                                    str);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+}
+
+void Window::alert(const std::wstring& str, const std::wstring& title, MessageType type)
+{
+    alert(utf8(str), utf8(title), type);
+}
+
+void Window::setTitle(const std::wstring& str)
+{
+    gtk_window_set_title(GTK_WINDOW(wnd), utf8(str));
+}
+
+std::pair<int, int> Window::getPos() const
+{
+    int x, y;
+    gtk_window_get_position(GTK_WINDOW(wnd), &x, &y);
+    return { x, y };
+}
+
+std::pair<int, int> Window::getSize()
+{
+    int w, h;
+    if (wnd != nullptr)
+    {
+        gtk_window_get_size(GTK_WINDOW(wnd), &w, &h);
+        if (w > 0 && w < UINT16_MAX && h > 0 && h < UINT16_MAX)
+        {
+            width = (uint16_t)w;
+            height = (uint16_t)h;
+        }
+    }
+    return { width, height };
+}
+
+#ifdef UNIT_TEST
 int main(int argc, char* argv[])
 {
-    GtkApplication *app;
-    int status;
-
-    app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
-    g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
-    status = g_application_run (G_APPLICATION (app), argc, argv);
-    g_object_unref (app);
-
-    return status;
+    Window w;
+    w.argc = argc;
+    w.argv = argv;
+    w.create(L"demo");
+    return 0;
 }
 #endif /* UNIT_TEST */
 #endif /* _GTK */

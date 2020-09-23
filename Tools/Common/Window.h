@@ -9,8 +9,8 @@ class Window
 {
     std::thread tWnd;
     std::wstring title;
-    uint16_t width;
-    uint16_t height;
+    mutable uint16_t width;
+    mutable uint16_t height;
 
 #ifdef _WIN32
     HWND hWnd;
@@ -22,48 +22,17 @@ class Window
     void looper();
 #endif /* _GTK */
 
-    /**
-     * @param int key: The virtual-key code of the key when the ALT key is not pressed.
-     */
     std::function<void(int)> onKeyDown = [](int) {};
     std::function<void(int)> onKeyUp = [](int) {};
-    /**
-     * @param uint32 vkeys: Indicates whether various virtual keys are down.
-     * @param int x: Specifies the x-coordinate of the cursor. The coordinate is 
-     *        relative to the upper-left corner of the client area.
-     * @param int y: Specifies the y-coordinate of the cursor. The coordinate is 
-     *        relative to the upper-left corner of the client area.
-     */
     std::function<void(uint32_t, int, int)> onLButtonDown = [](uint32_t, int, int) {};
     std::function<void(uint32_t, int, int)> onLButtonUp = [](uint32_t, int, int) {};
     std::function<void(uint32_t, int, int)> onRButtonDown = [](uint32_t, int, int) {};
     std::function<void(uint32_t, int, int)> onRButtonUp = [](uint32_t, int, int) {};
     std::function<void(uint32_t, int, int)> onMouseMove = [](uint32_t, int, int) {};
-    /**
-     * @param uint32 vkeys: Indicates whether various virtual keys are down.
-     * @param short zDelta: indicates the distance the wheel is rotated. A positive 
-     *               value indicates that the wheel was rotated forward,
-     *               away from the user; a negative value indicates that the 
-     *               wheel was rotated backward, toward the user.
-     * @param int x: Specifies the x - coordinate of the pointer, relative to the 
-     *        upper - left corner of the screen.
-     * @param int y: Specifies the y - coordinate of the pointer, relative to the 
-     *        upper - left corner of the screen.
-     */
     std::function<void(uint32_t, short, int, int)> onMouseWheel = [](uint32_t, short, int, int) {};
-    /**
-     * @param GdiCanvas the Canvas you can draw stuff on
-     */
     std::function<void(const GdiCanvas&)> onPaint = [](const GdiCanvas&) {};
-    /**
-     * @return bool: indicate do exit or not
-     */
     std::function<bool()> onExit = [] { return true; };
 #ifdef _WIN32
-    /**
-     * @param uint32_t message: A message id constant
-     * @return bool: indicate whether any message handled
-     */
     std::function<bool(uint32_t, WPARAM, LPARAM)> onElse = [](uint32_t, WPARAM, LPARAM) { return false; };
 #endif /* _WIN32 */
 #ifdef _GTK
@@ -72,6 +41,7 @@ class Window
      * Declared as friend function to allow access to @ref wnd.
      */
     friend void activate(GtkApplication*, gpointer);
+    friend gboolean paint(GtkWidget*, cairo_t*, gpointer);
 #endif /* _GTK */
     void isRunning() {
         if (tWnd.joinable())
@@ -80,14 +50,14 @@ class Window
 
 public:
     int argc;
-    char **argv;
-
 #ifdef _WIN32
+    wchar_t **argv;
     Window():
         width(0), height(0), hWnd(NULL), argc(0), argv(nullptr)
         {}
 #endif /* _WIN32 */
 #ifdef _GTK
+    char **argv;
     Window():
         width(0), height(0), app(nullptr), wnd(nullptr), argc(0), argv(nullptr)
         {}
@@ -164,9 +134,10 @@ public:
      * @param title The title of the message box.
      * @param type The messagebox type, defined in @ref MessageType.
      */
-    void alert(const char* str, const char* title, MessageType type = INFO);
+    void alert(const char* str, 
+               const char* title, MessageType type = INFO);
     void alert(const std::wstring& str,
-                        const std::wstring& title, MessageType type = INFO);
+               const std::wstring& title, MessageType type = INFO);
     void setTitle(const std::wstring& str);
 
     /**
@@ -177,7 +148,7 @@ public:
      * @return The size (width, height) of the window. If the window is not 
      * created yet, default windows size is returned.
      */
-    std::pair<int, int> getSize();
+    std::pair<int, int> getSize() const;
 
     /**
      * @param str A wide-char string.
@@ -190,33 +161,94 @@ public:
         return s.c_str();
     }
 
+    /**
+     * @param int key: The virtual-key code of the key when the ALT key is not pressed.
+     */
     template <typename T>
     void setKeyDownHandler(T&& handler)     { isRunning(); onKeyDown = handler; }
+    /**
+     * @param int key: The virtual-key code of the key when the ALT key is not pressed.
+     */
     template <typename T>
     void setKeyUpHandler(T&& handler)       { isRunning(); onKeyUp = handler; }
+    /**
+     * @param uint32 vkeys: Indicates whether various virtual keys are down.
+     * @param int x: Specifies the x-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     * @param int y: Specifies the y-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     */
     template <typename T>
     void setLButtonDownHandler(T&& handler) { isRunning(); onLButtonDown = handler; }
+    /**
+     * @param uint32 vkeys: Indicates whether various virtual keys are down.
+     * @param int x: Specifies the x-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     * @param int y: Specifies the y-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     */
     template <typename T>
     void setLButtonUpHandler(T&& handler)   { isRunning(); onLButtonUp = handler; }
+    /**
+     * @param uint32 vkeys: Indicates whether various virtual keys are down.
+     * @param int x: Specifies the x-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     * @param int y: Specifies the y-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     */
     template <typename T>
     void setRButtonDownHandler(T&& handler) { isRunning(); onRButtonDown = handler; }
+    /**
+     * @param uint32 vkeys: Indicates whether various virtual keys are down.
+     * @param int x: Specifies the x-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     * @param int y: Specifies the y-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     */
     template <typename T>
     void setRButtonUpHandler(T&& handler)   { isRunning(); onRButtonUp = handler; }
+    /**
+     * @param uint32 vkeys: Indicates whether various virtual keys are down.
+     * @param int x: Specifies the x-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     * @param int y: Specifies the y-coordinate of the cursor. The coordinate is 
+     *        relative to the upper-left corner of the client area.
+     */
     template <typename T>
     void setMouseMoveHandler(T&& handler)   { isRunning(); onMouseMove = handler; }
+    /**
+     * @param uint32 vkeys: Indicates whether various virtual keys are down.
+     * @param short zDelta: indicates the distance the wheel is rotated. A positive 
+     *               value indicates that the wheel was rotated forward,
+     *               away from the user; a negative value indicates that the 
+     *               wheel was rotated backward, toward the user.
+     * @param int x: Specifies the x - coordinate of the pointer, relative to the 
+     *        upper - left corner of the screen.
+     * @param int y: Specifies the y - coordinate of the pointer, relative to the 
+     *        upper - left corner of the screen.
+     */
     template <typename T>
     void setMouseWheelHandler(T&& handler)  { isRunning(); onMouseWheel = handler; }
+    /**
+     * @param const GdiCanvas& the Canvas you can draw stuff on
+     */
     template <typename T>
     void setPaintHandler(T&& handler)       { isRunning(); onPaint = handler; }
+    /**
+     * @return false if you want to cancel the close.
+     */
     template <typename T>
     void setExitCallback(T&& handler)       { isRunning(); onExit = handler; }
 #ifdef _WIN32
+    /**
+     * @param uint32_t message: A message id constant
+     * @return bool: indicate whether any message handled
+     */
     template <typename T>
     void setElseHandler(T&& handler)        { isRunning(); onElse = handler; }
 #endif /* _WIN32 */
 #ifdef _GTK
 #endif /* _GTK */
-
     auto& getKeyDownHandler() const         { return onKeyDown; }
     auto& getKeyUpHandler() const           { return onKeyUp; }
     auto& getLButtonDownHandler() const     { return onLButtonDown; }

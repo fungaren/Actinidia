@@ -1,22 +1,21 @@
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #ifdef _WIN32
     #include "pch.h"
 #endif /* _WIN32 */
 #ifdef _GTK
-
+    #include <gtk/gtk.h>
 #endif /* _GTK */
-#include <iostream>
-#include <string>
-#include <sstream>
 #include <future>
 #include <chrono>
 #include <fstream>
 #include <experimental/filesystem>
 #include <thread>
-#include <map>
-#ifdef _WIN32
 #include "ImageMatrix.h"
 #include "Canvas.h"
 
+#ifdef _WIN32
 void GdiCanvas::fillSolidRect(int left, int top, int right, int bottom, color fillColor) const
 {
     SetBkColor(hdc, toABGR(fillColor) & 0x00FFFFFF);
@@ -189,8 +188,57 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
 
     delete[] buffer;
 }
-
 #endif /* _WIN32 */
 #ifdef _GTK
+void GdiCanvas::fillSolidRect(int left, int top, int right, int bottom, color c) const
+{
+    cairo_set_source_rgb(cr, redChannelf(c), greenChannelf(c), blueChannelf(c));
+    cairo_rectangle(cr, left, top, right-left, bottom-top);
+    cairo_fill(cr);
+}
+
+bool GdiCanvas::printText(int x, int y, std::wstring str, uint16_t len,
+    std::wstring fontName, uint8_t fontSize, color fontColor, 
+    CharStyle style) const
+{
+    return true;
+}
+
+void GdiCanvas::drawLine(int x1, int y1, int x2, int y2,
+    LineStyle ls, color c) const
+{
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_SUBPIXEL);
+    cairo_set_source_rgb(cr, redChannelf(c), greenChannelf(c), blueChannelf(c));
+    cairo_set_line_width(cr, 1);
+    /* cairo_set_dash */
+    cairo_move_to(cr, x1, y1);
+    cairo_line_to(cr, x2, y2);
+    cairo_stroke(cr);
+}
+
+void GdiCanvas::rectangle(int left, int top, int right, int bottom,
+    LineStyle ls, color c) const
+{
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_SUBPIXEL);
+    cairo_set_source_rgb(cr, redChannelf(c), greenChannelf(c), blueChannelf(c));
+    cairo_set_line_width(cr, 1);
+    /* cairo_set_dash */
+    cairo_rectangle(cr, left, top, right-left, bottom-top);
+    cairo_stroke(cr); 
+}
+
+// Do not support alpha blend. The alpha channel will be discarded.
+void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
+{
+    
+}
+
+// Do not support alpha blend. The alpha channel will be discarded.
+void GdiCanvas::paste(const pImageMatrix imSrc,
+    int xDest, int yDest, int destWidth, int destHeight,
+    int xSrc, int ySrc, int srcWidth, int srcHeight) const
+{
+    
+}
 
 #endif /* _GTK */

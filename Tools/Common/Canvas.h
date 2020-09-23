@@ -10,6 +10,30 @@ public:
     
     // 0xAARRGGBB (A: opacity, R: red, G: green, B: blue)
     typedef uint32_t color;
+    static inline uint8_t alphaChannel(color c) {
+        return (uint8_t)(c >> 24);
+    }
+    static inline double alphaChannelf(color c) {
+        return (uint8_t)(c >> 24) / 255.0;
+    }
+    static inline uint8_t redChannel(color c) {
+        return (uint8_t)(c >> 16);
+    }
+    static inline double redChannelf(color c) {
+        return (uint8_t)(c >> 16) / 255.0;
+    }
+    static inline uint8_t greenChannel(color c) {
+        return (uint8_t)(c >> 8);
+    }
+    static inline double greenChannelf(color c) {
+        return (uint8_t)(c >> 8) / 255.0;
+    }
+    static inline uint8_t blueChannel(color c) {
+        return (uint8_t)c;
+    }
+    static inline double blueChannelf(color c) {
+        return (uint8_t)c / 255.0;
+    }
     static inline color rgb(uint8_t r, uint8_t g, uint8_t b) {
         return (0xFF << 24) | (r << 16) | (g << 8) | b;
     }
@@ -52,9 +76,9 @@ public:
 #endif /* _WIN32 */
     };
 
-    /// <summary>
-    /// @param int opacity: 0-255
-    /// </summary>
+    /*
+     * @param int opacity: 0-255
+     */
     static color blend(color dest, color src, uint8_t opacity) {
         // Alpha
         uint32_t channel_src = src >> 8 * 3;
@@ -110,88 +134,41 @@ public:
 
 typedef PlatformIndependenceCanvas PiCanvas;
 
-#ifdef _WIN32
 class GdiCanvas : Canvas
 {
 private:
+#ifdef _WIN32
     HWND hwnd;
     HDC hdc;
+#endif /* _WIN32 */
+#ifdef _GTK
+    cairo_t *cr;
+    GtkWindow *wnd;
+#endif /* _GTK */
 
 public:
 
+#ifdef _WIN32
     GdiCanvas(HWND hWnd)
-        :hwnd(hWnd),
-        hdc(GetDC(hWnd))
+        :hwnd(hWnd), hdc(GetDC(hWnd))
     { }
 
     GdiCanvas(HWND hWnd, HDC hdc)
-        :hwnd(hWnd),
-        hdc(hdc)
+        :hwnd(hWnd), hdc(hdc)
     { }
-
-    GdiCanvas(GdiCanvas&) = delete;
 
     ~GdiCanvas() {
         ReleaseDC(hwnd, hdc);
     }
-
-    void fillSolidRect(int left, int top, int right, int bottom, color fillColor) const;
-
-    //const unsigned int format = DT_NOPREFIX | DT_WORDBREAK | DT_EDITCONTROL | DT_NOCLIP | DT_HIDEPREFIX;
-    //// calc expected height for specific text width
-    //int calcHeight(const std::wstring& str, int width)
-    //{
-    //  RECT rc = { 0,0,width,0 };
-    //  DrawTextW(hdc, str.c_str(), str.length(), &rc, format | DT_CALCRECT);
-    //  return rc.bottom - rc.top;
-    //}
-
-    //Font& drawText(const std::wstring& str, int left, int top, int width, int height) {
-    //  RECT rc = { left, top, left + width, top + height };
-
-    //  SetBkMode(hdc, TRANSPARENT);
-    //  SetTextColor(hdc, color);
-
-    //  DrawTextW(hdc, str.c_str(), str.length(), &rc, format);
-    //  return *this;
-    //}
-
-    bool printText(int x, int y, std::wstring str, uint16_t len,
-        std::wstring fontName, uint8_t fontSize, color fontColor = Constant::black, 
-        CharStyle style = Constant::style_default) const;
-
-    void drawLine(int x1, int y1, int x2, int y2,
-        LineStyle ls = LineStyle::solid, color lineColor = Constant::black) const;
-
-    void rectangle(int left, int top, int right, int bottom,
-        LineStyle ls = LineStyle::solid, color lineColor = Constant::black) const;
-
-    // Do not support alpha blend. The alpha channel will be discard.
-    void paste(const pImageMatrix imSrc, int xDest, int yDest) const;
-
-    // Do not support alpha blend. The alpha channel will be discard.
-    void paste(const pImageMatrix imSrc,
-        int xDest, int yDest, int destWidth, int destHeight,
-        int xSrc, int ySrc, int srcWidth, int srcHeight) const;
-};
 #endif /* _WIN32 */
 #ifdef _GTK
-class GdiCanvas : Canvas
-{
-private:
-
-
-public:
-
-    GdiCanvas()
+    GdiCanvas(GtkWindow *wnd, cairo_t *cr)
+        :cr(cr), wnd(wnd)
     { }
 
-
+    ~GdiCanvas() {}
+#endif /* _GTK */
     GdiCanvas(GdiCanvas&) = delete;
-
-    ~GdiCanvas() {
-        
-    }
 
     void fillSolidRect(int left, int top, int right, int bottom, color fillColor) const;
 
@@ -224,12 +201,11 @@ public:
     void rectangle(int left, int top, int right, int bottom,
         LineStyle ls = LineStyle::solid, color lineColor = Constant::black) const;
 
-    // Do not support alpha blend. The alpha channel will be discard.
+    // Do not support alpha blend. The alpha channel will be discarded.
     void paste(const pImageMatrix imSrc, int xDest, int yDest) const;
 
-    // Do not support alpha blend. The alpha channel will be discard.
+    // Do not support alpha blend. The alpha channel will be discarded.
     void paste(const pImageMatrix imSrc,
         int xDest, int yDest, int destWidth, int destHeight,
         int xSrc, int ySrc, int srcWidth, int srcHeight) const;
 };
-#endif /* _GTK */

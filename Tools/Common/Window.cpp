@@ -8,6 +8,7 @@
     #include <gtk/gtk.h>
 #endif /* _GTK */
 #include "Window.h"
+#include "Keycodes.h"
 
 #ifdef _WIN32
 #include <map>
@@ -26,19 +27,24 @@ LRESULT CALLBACK Window::dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARA
         callbackSource[hWnd]->getKeyUpHandler()((uint32_t)wParam);
         break;
     case WM_LBUTTONDOWN:
-        callbackSource[hWnd]->getLButtonDownHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        callbackSource[hWnd]->getLButtonDownHandler()(
+            (uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
         break;
     case WM_LBUTTONUP:
-        callbackSource[hWnd]->getLButtonUpHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        callbackSource[hWnd]->getLButtonUpHandler()(
+            (uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
         break;
     case WM_RBUTTONDOWN:
-        callbackSource[hWnd]->getRButtonDownHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        callbackSource[hWnd]->getRButtonDownHandler()(
+            (uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
         break;
     case WM_RBUTTONUP:
-        callbackSource[hWnd]->getRButtonUpHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        callbackSource[hWnd]->getRButtonUpHandler()(
+            (uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
         break;
     case WM_MOUSEMOVE:
-        callbackSource[hWnd]->getMouseMoveHandler()((uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
+        callbackSource[hWnd]->getMouseMoveHandler()(
+            (uint32_t)wParam, (short)LOWORD(lParam), (short)HIWORD(lParam));
         break;
     case WM_MOUSEWHEEL:
         callbackSource[hWnd]->getMouseWheelHandler()(
@@ -139,7 +145,9 @@ std::pair<int, int> Window::getSize() const
 {
     RECT rc;
     GetClientRect(hWnd, &rc);
-    return { rc.right - rc.left, rc.bottom - rc.top };
+    width = rc.right - rc.left;
+    height = rc.bottom - rc.top;
+    return { width, height };
 }
 
 #ifdef UNIT_TEST
@@ -163,14 +171,125 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
     Window w;
+    w.argv = CommandLineToArgvW(lpCmdLine, &w.argc);
     w.create(L"demo");
 }
 #endif /* UNIT_TEST */
 
 #endif /* _WIN32 */
 #ifdef _GTK
+gboolean keydown(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    w->getKeyDownHandler()(event->keyval);
+    return TRUE;
+}
+
+gboolean keyup(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    w->getKeyUpHandler()(event->keyval);
+    return TRUE;
+}
+
+gboolean btndown(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    uint32_t modifiers = 0;
+    // GdkModifierType
+    if (event->state & GDK_SHIFT_MASK)
+        modifiers |= KEY_Shift_L;
+    if (event->state & GDK_CONTROL_MASK)
+        modifiers |= KEY_Control_L;
+    if (event->state & GDK_MOD1_MASK)
+        modifiers |= KEY_Alt_L;
+    if (event->button == GDK_BUTTON_PRIMARY)
+        w->getLButtonDownHandler()(modifiers, event->x, event->y);
+    else if (event->button == GDK_BUTTON_SECONDARY)
+        w->getRButtonDownHandler()(modifiers, event->x, event->y);
+    if (event->type == GDK_2BUTTON_PRESS) 
+        ; // double click
+    return TRUE;
+}
+
+gboolean btnup(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    uint32_t modifiers = 0;
+    // GdkModifierType
+    if (event->state & GDK_SHIFT_MASK)
+        modifiers |= KEY_Shift_L;
+    if (event->state & GDK_CONTROL_MASK)
+        modifiers |= KEY_Control_L;
+    if (event->state & GDK_MOD1_MASK)
+        modifiers |= KEY_Alt_L;
+    if (event->button == GDK_BUTTON_PRIMARY)
+        w->getLButtonUpHandler()(modifiers, event->x, event->y);
+    else if (event->button == GDK_BUTTON_SECONDARY)
+        w->getRButtonUpHandler()(modifiers, event->x, event->y);
+    return TRUE;
+}
+
+gboolean mousemove(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    uint32_t modifiers = 0;
+    // GdkModifierType
+    if (event->state & GDK_SHIFT_MASK)
+        modifiers |= KEY_Shift_L;
+    if (event->state & GDK_CONTROL_MASK)
+        modifiers |= KEY_Control_L;
+    if (event->state & GDK_MOD1_MASK)
+        modifiers |= KEY_Alt_L;
+    w->getMouseMoveHandler()(modifiers, event->x, event->y);
+    return TRUE;
+}
+
+gboolean mousewheel(GtkWidget *widget, GdkEventScroll *event, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    uint32_t modifiers = 0;
+    // GdkModifierType
+    if (event->state & GDK_SHIFT_MASK)
+        modifiers |= KEY_Shift_L;
+    if (event->state & GDK_CONTROL_MASK)
+        modifiers |= KEY_Control_L;
+    if (event->state & GDK_MOD1_MASK)
+        modifiers |= KEY_Alt_L;
+    if (event->direction == GDK_SCROLL_UP)
+        w->getMouseWheelHandler()(modifiers,
+            (short)event->delta_y, 
+            (int)event->x_root, 
+            (int)event->y_root);
+    else if (event->direction == GDK_SCROLL_DOWN)
+        w->getMouseWheelHandler()(modifiers, 
+            (short)-event->delta_y, 
+            (int)event->x_root, 
+            (int)event->y_root);
+    return TRUE;
+}
+
+gboolean paint(GtkWidget *widget, cairo_t *cr, gpointer user_data)
+{
+    /*
+     * Don't need to restore cr. The signal emission takes care of 
+     * calling cairo_save() before and cairo_restore() after invoking 
+     * the handler.
+     * To avoid redrawing themselves completely, one can get the full 
+     * extents of the clip region with cairo_copy_clip_rectangle_list().
+     */
+    Window *w = (Window *)user_data;
+    GdiCanvas gdi(GTK_WINDOW(w->wnd), cr);
+    w->getPaintHandler()(gdi);
+    return FALSE;
+}
+
+gboolean onclose(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    return !w->getExitCallback()();
+}
 
 void activate(GtkApplication* app, gpointer user_data)
 {
@@ -180,6 +299,29 @@ void activate(GtkApplication* app, gpointer user_data)
     std::tie(width, height) = w->getSize();
     gtk_window_set_default_size(GTK_WINDOW(w->wnd), width, height);
     gtk_window_set_title(GTK_WINDOW(w->wnd), w->utf8(w->title));
+    gtk_window_set_position(GTK_WINDOW(w->wnd), GTK_WIN_POS_CENTER);
+
+    /* draw area */
+    GtkWidget *draw_area = gtk_drawing_area_new();
+    gtk_container_add(GTK_CONTAINER(w->wnd), draw_area);
+    gtk_widget_add_events(draw_area,
+        GDK_POINTER_MOTION_MASK |
+        GDK_BUTTON_PRESS_MASK | 
+        GDK_BUTTON_MOTION_MASK |
+        GDK_BUTTON_PRESS_MASK | 
+        GDK_BUTTON_RELEASE_MASK | 
+        GDK_KEY_PRESS_MASK | 
+        GDK_KEY_RELEASE_MASK |
+        GDK_SCROLL_MASK );
+    g_signal_connect(draw_area, "key-press-event", G_CALLBACK(keydown), w);
+    g_signal_connect(draw_area, "key-release-event", G_CALLBACK(keyup), w);
+    g_signal_connect(draw_area, "button-press-event", G_CALLBACK(btndown), w);
+    g_signal_connect(draw_area, "button-release-event", G_CALLBACK(btnup), w);
+    g_signal_connect(draw_area, "motion-notify-event", G_CALLBACK(mousemove), w);
+    g_signal_connect(draw_area, "scroll-event", G_CALLBACK(mousewheel), w);
+    g_signal_connect(draw_area, "delete-event", G_CALLBACK(onclose), w);
+    g_signal_connect(draw_area, "draw", G_CALLBACK(paint), w);
+
     gtk_widget_show_all(w->wnd);
 }
 
@@ -199,13 +341,17 @@ void Window::refresh()
 }
 
 void Window::alert(const char* str, const char* title, MessageType type)
-{
-    GtkDialogFlags flags = GTK_DIALOG_DESTROY_WITH_PARENT;
-    GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(wnd),
-                                    flags,
-                                    (GtkMessageType)type,
-                                    GTK_BUTTONS_CLOSE,
-                                    str);
+{  
+    /*
+     * The message box icon may not display, don't know why.
+     */
+    GtkWidget *dialog = gtk_message_dialog_new(
+        GTK_WINDOW(wnd),
+        GTK_DIALOG_MODAL,
+        (GtkMessageType)type,
+        GTK_BUTTONS_OK,
+        str );
+    gtk_window_set_title(GTK_WINDOW(dialog), title);
     gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
 }
@@ -227,7 +373,7 @@ std::pair<int, int> Window::getPos() const
     return { x, y };
 }
 
-std::pair<int, int> Window::getSize()
+std::pair<int, int> Window::getSize() const
 {
     int w, h;
     if (wnd != nullptr)
@@ -248,6 +394,36 @@ int main(int argc, char* argv[])
     Window w;
     w.argc = argc;
     w.argv = argv;
+    w.setRButtonDownHandler([&w](uint32_t vkeys, int x, int y) {
+        w.alert("hello", "good");
+    });
+    w.setKeyDownHandler([&w](int key) {
+        if (key < 127) {
+            char buf[2] = {0};
+            buf[0] = (char)key;
+            w.alert(buf, "you pressed:");
+        }
+    });
+    int x1=0, y1=0;
+    w.setLButtonDownHandler([&](uint32_t vkeys, int x, int y) {
+        x1 = x;
+        y1 = y;
+    });
+    int x2, y2;
+    w.setMouseMoveHandler([&](uint32_t vkeys, int x, int y) {
+        x2 = x;
+        y2 = y;
+        w.refresh();
+    });
+    w.setLButtonUpHandler([&](uint32_t vkeys, int x, int y) {
+        w.refresh();
+    });
+    w.setPaintHandler([&](const GdiCanvas& gdi) {
+        int width, height;
+        std::tie(width, height) = w.getSize();
+        gdi.fillSolidRect(0, 0, width, height, Canvas::Constant::yellow);
+        gdi.drawLine(x1, y1, x2, y2, Canvas::LineStyle::none, Canvas::Constant::cyan);
+    });
     w.create(L"demo");
     return 0;
 }

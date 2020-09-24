@@ -154,10 +154,10 @@ public:
      * @param str A wide-char string.
      * @return A UTF-8 encoded C-type string.
      */
-    const char* utf8(const std::wstring& str) const {
+    static const char* utf8(const std::wstring& str) {
         static std::string s; // for temporary use
         std::wstring_convert<std::codecvt_utf8<wchar_t>> cvt;
-        s = cvt.to_bytes(title);
+        s = cvt.to_bytes(str);
         return s.c_str();
     }
 

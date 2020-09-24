@@ -1,38 +1,20 @@
 #ifdef _WIN32
     #include "pch.h"
+    #ifdef _DEBUG
+        #pragma comment(lib, "libpng/libpng16d.lib")
+        #pragma comment(lib, "zlib/zlibd.lib")
+        #pragma comment(lib, "libjpeg/jpegd.lib")
+    #else
+        #pragma comment(lib, "libpng/libpng16.lib")
+        #pragma comment(lib, "zlib/zlib.lib")
+        #pragma comment(lib, "libjpeg/jpeg.lib")
+    #endif
 #endif /* _WIN32 */
 #ifdef _GTK
 
 #endif /* _GTK */
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <future>
-#include <chrono>
-#include <fstream>
-#include <experimental/filesystem>
-#include <thread>
-#include <map>
-// Add code below to pch.h and set C++ standard to 17
-/*
-#include <Windows.h>
-#undef max
-#include <iostream>
-#include <string>
-#include <thread>
-#include <filesystem>
-*/
-
+#include <cstring>
 #include "ImageMatrix.h"
-#ifdef _DEBUG
-    #pragma comment(lib, "libpng/libpng16d.lib")
-    #pragma comment(lib, "zlib/zlibd.lib")
-    #pragma comment(lib, "libjpeg/jpegd.lib")
-#else
-    #pragma comment(lib, "libpng/libpng16.lib")
-    #pragma comment(lib, "zlib/zlib.lib")
-    #pragma comment(lib, "libjpeg/jpeg.lib")
-#endif
 
 pImageMatrix ImageMatrixFactory::fromPixelData(uint32_t* data, uint16_t width, uint16_t height, bool ignoreAlpha)
 {
@@ -100,9 +82,7 @@ pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t heig
 
 pImageMatrix ImageMatrixFactory::fromPngFile(const char* pngFile)
 {
-    FILE *fp;
-    if (fopen_s(&fp, pngFile, "rb"))
-        throw std::runtime_error("Failed to open file");
+    FILE *fp = openfile(pngFile, "rb");
     try {
         pImageMatrix im = fromPngFile(fp);
         fclose(fp);
@@ -116,9 +96,7 @@ pImageMatrix ImageMatrixFactory::fromPngFile(const char* pngFile)
 
 pImageMatrix ImageMatrixFactory::fromPngFile(const wchar_t* pngFile)
 {
-    FILE *fp;
-    if (_wfopen_s(&fp, pngFile, L"rb"))
-        throw std::runtime_error("Failed to open file");
+    FILE *fp = openfile(pngFile, L"rb");
     try {
         pImageMatrix im = fromPngFile(fp);
         fclose(fp);
@@ -220,7 +198,12 @@ pImageMatrix ImageMatrixFactory::fromPngResource(UINT nResID, LPCTSTR lpType, HM
 void ImageMatrixFactory::png_read_data_fn(png_structp png_ptr, png_bytep dest, png_size_t length)
 {
     mem_image* mp = (mem_image*)png_get_io_ptr(png_ptr);
+    #ifdef _WIN32
     memcpy_s(dest, length, (uint8_t*)mp->addr + mp->has_read, length);
+    #endif /* _WIN32 */
+    #ifdef _UNIX
+    memcpy(dest, (uint8_t*)mp->addr + mp->has_read, length);
+    #endif /* _UNIX */
     mp->has_read += length;
 }
 
@@ -231,8 +214,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     uint8_t color_type = png_get_color_type(png_ptr, info_ptr);
     uint32_t w = png_get_image_width(png_ptr, info_ptr);
     uint32_t h = png_get_image_height(png_ptr, info_ptr);
-    if (w >= std::numeric_limits<uint16_t>::max() ||
-        h >= std::numeric_limits<uint16_t>::max()) {
+    if (w >= UINT16_MAX || h >= UINT16_MAX) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
         throw std::runtime_error("Image size is too large");
     }
@@ -298,9 +280,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
 
 void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const char* filePath)
 {
-    FILE *fp;
-    if (fopen_s(&fp, filePath, "wb"))
-        throw std::runtime_error("Failed to create file");
+    FILE *fp = openfile(filePath, "wb");
     try {
         dumpPngFile(im, fp);
         fclose(fp);
@@ -313,9 +293,7 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const char* filePath
 
 void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const wchar_t* filePath)
 {
-    FILE *fp;
-    if (_wfopen_s(&fp, filePath, L"wb"))
-        throw std::runtime_error("Failed to create file");
+    FILE *fp = openfile(filePath, L"wb");
     try {
         dumpPngFile(im, fp);
         fclose(fp);
@@ -431,9 +409,7 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, FILE *fp)
 
 pImageMatrix ImageMatrixFactory::fromJpegFile(const char* jpegFile)
 {
-    FILE *fp;
-    if (fopen_s(&fp, jpegFile, "rb"))
-        throw std::runtime_error("Failed to open file");
+    FILE *fp = openfile(jpegFile, "rb");
     try {
         pImageMatrix im = fromJpegFile(fp);
         fclose(fp);
@@ -448,9 +424,7 @@ pImageMatrix ImageMatrixFactory::fromJpegFile(const char* jpegFile)
 
 pImageMatrix ImageMatrixFactory::fromJpegFile(const wchar_t* jpegFile)
 {
-    FILE *fp;
-    if (_wfopen_s(&fp, jpegFile, L"rb"))
-        throw std::runtime_error("Failed to open file");
+    FILE *fp = openfile(jpegFile, L"rb");
     try {
         pImageMatrix im = fromJpegFile(fp);
         fclose(fp);
@@ -462,9 +436,8 @@ pImageMatrix ImageMatrixFactory::fromJpegFile(const wchar_t* jpegFile)
     }
 }
 
-
 inline void _trace(std::wstring str) {
-#ifdef _DEBUG
+#if (defined _WIN32) && (defined _DEBUG)
     OutputDebugString((str + L'\n').c_str());
 #endif
 }
@@ -600,8 +573,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
 
     uint32_t h = cinfo.output_height;
     uint32_t w = cinfo.output_width;
-    if (w >= std::numeric_limits<uint16_t>::max() ||
-        h >= std::numeric_limits<uint16_t>::max()) {
+    if (w >= UINT16_MAX || h >= UINT16_MAX) {
         jpeg_destroy_decompress(&cinfo);
         throw std::runtime_error("Image size is too large");
     }
@@ -682,9 +654,7 @@ void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const char* filePat
 {
     if (quality > 100)
         throw std::invalid_argument("Quality range [1,100]");
-    FILE *fp;
-    if (fopen_s(&fp, filePath, "wb"))
-        throw std::runtime_error("Failed to create file");
+    FILE *fp = openfile(filePath, "wb");
     try {
         dumpJpegFile(im, fp, quality);
         fclose(fp);
@@ -699,9 +669,7 @@ void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const wchar_t* file
 {
     if (quality > 100)
         throw std::invalid_argument("Quality range [1,100]");
-    FILE *fp;
-    if (_wfopen_s(&fp, filePath, L"wb"))
-        throw std::runtime_error("Failed to create file");
+    FILE *fp = openfile(filePath, L"wb");
     try {
         dumpJpegFile(im, fp, quality);
         fclose(fp);
@@ -793,6 +761,7 @@ void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, FILE *fp, uint8_t q
      * more if you wish, though.
      */
     row_stride = im->getWidth() * 4; /* JSAMPLEs per row in image_buffer */
+    (void)row_stride; /* not used */
 
     while (cinfo.next_scanline < cinfo.image_height) {
         /* jpeg_write_scanlines expects an array of pointers to scanlines.

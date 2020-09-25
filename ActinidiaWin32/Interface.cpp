@@ -165,11 +165,7 @@ int GetImage(lua_State *L)
     pImageMatrix g;
     if (bDirectMode) {
         try {
-            std::string extname = f.substr(f.size() - 3, 3);
-            if (extname == "png" || extname == "PNG")
-                g = ImageMatrixFactory::fromPngFile(("./game/" + f).c_str());
-            else
-                g = ImageMatrixFactory::fromJpegFile(("./game/" + f).c_str());
+            g = ImageMatrixFactory::openImage(("./game/" + f).c_str());
             lua_pushinteger(L, (lua_Integer)g);
             return 1;
         }

@@ -1,10 +1,16 @@
 #pragma once
-
-#include "../libpng/png.h"
-#include "../zlib/zlib.h"
-extern "C" {
-#include "../libjpeg/jpeglib.h"
-}
+#ifdef _WIN32
+    #include "../libpng/png.h"
+    #include "../zlib/zlib.h"
+    extern "C" {
+    #include "../libjpeg/jpeglib.h"
+    }
+#endif /* _WIN32 */
+#ifdef _GTK
+    #include "png.h"
+    #include "zlib.h"
+    #include "jpeglib.h"
+#endif /* _GTK */
 #include <cstdint>
 #include <codecvt>
 #include <locale>
@@ -18,16 +24,16 @@ protected:
 public:
     virtual uint16_t getWidth() const = 0;
     virtual uint16_t getHeight() const = 0;
-    virtual uint32_t** getMatrix() const = 0;
+    virtual uint32_t* getMatrix() const = 0;
 };
 
 class ImageMatrix : Matrix {
     friend class ImageMatrixFactory;
 
-    ImageMatrix(uint32_t **table, uint16_t width, uint16_t height)
+    ImageMatrix(uint32_t *table, uint16_t width, uint16_t height)
         : matrix(table), width(width), height(height) {}
 
-    uint32_t** matrix;
+    uint32_t* matrix;
     uint16_t width;
     uint16_t height;
     
@@ -47,17 +53,26 @@ public:
         src.matrix = nullptr;
     }
 
+    void discardAlphaChannel()
+    {
+        if (matrix == nullptr)
+            return;
+        for (uint32_t i = 0; i < (uint32_t)width*height; ++i)
+            matrix[i] |= 0xFF000000;
+    }
+
     uint16_t getWidth() const { return width; };
     uint16_t getHeight() const { return height; };
-    uint32_t** getMatrix() const { return matrix; };
+    uint32_t* getMatrix() const { return matrix; };
 
     ~ImageMatrix() {
         if (matrix == nullptr)
             return;
-        for (uint16_t y = 0; y < height; ++y)
-            delete[] matrix[y];
         delete[] matrix;
     }
+
+    #define _pos(im, x, y) ((y)*(im->getWidth())+(x))
+    #define _color(im, x, y) im->getMatrix()[_pos(im, x, y)]
 };
 
 typedef ImageMatrix* pImageMatrix;
@@ -100,11 +115,13 @@ class ImageMatrixFactory {
 #ifdef _WIN32
         if (fopen_s(&fp, path, mode))
 #endif /* _WIN32 */
-#ifdef _UNIX
+#ifdef _GTK
         fp = fopen(path, mode);
         if (fp == NULL)
-#endif /* _UNIX */
-            throw std::runtime_error("Failed to open file");
+#endif /* _GTK */
+            throw std::runtime_error(
+                std::string("Failed to open file: ") + strerror(errno)
+            );
         return fp;
     }
     static FILE* openfile(const wchar_t* path, const wchar_t* mode) noexcept(false) {
@@ -112,11 +129,13 @@ class ImageMatrixFactory {
 #ifdef _WIN32
         if (_wfopen_s(&fp, path, mode))
 #endif /* _WIN32 */
-#ifdef _UNIX
+#ifdef _GTK
         fp = fopen(utf8(path), utf8(mode));
         if (fp == NULL)
-#endif /* _UNIX */
-            throw std::runtime_error("Failed to open file");
+#endif /* _GTK */
+            throw std::runtime_error(
+                std::string("Failed to open file: ") + strerror(errno)
+            );
         return fp;
     }
 public:
@@ -129,16 +148,6 @@ public:
         mem_image(void* pImageRes, size_t len)
             : size(len), addr(pImageRes) {}
     };
-
-    /**
-     * @param data The pixel data buffer in memory.
-     * @param width Width of the pixel data in memory.
-     * @param height Height of the pixel data in memory.
-     * @param ignoreApha Whether ignore the alpha channel.
-     * @return A pImageMatrix handle.
-     */
-    static pImageMatrix fromPixelData(uint32_t* data, uint16_t width, uint16_t height,
-        bool ignoreAlpha = false) noexcept(false);
 
     /**
      * @param width Width of buffer image.
@@ -230,6 +239,25 @@ public:
 #ifdef _GTK
 
 #endif /* _GTK */
+    
+    /**
+     * @param imageFile The file path of the image file. Only png and jpeg 
+     *                  format are supported.
+     * @return A pImageMatrix handle.
+     */
+    static pImageMatrix openImage(const char* imageFile) noexcept(false)
+    {
+        std::string extname = imageFile + strlen(imageFile) - 3;
+        if (extname == "png" || extname == "PNG")
+            return ImageMatrixFactory::fromPngFile(imageFile);
+        else if (extname == "jpg" || extname == "JPG")
+            return ImageMatrixFactory::fromJpegFile(imageFile);
+        else 
+            throw std::runtime_error(
+                std::string("Unknown image file: ") + imageFile
+            );
+    }
+
     /**
      * @param im pImageMatix handle
      * @param filePath the save path of the jpeg file.

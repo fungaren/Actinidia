@@ -101,7 +101,7 @@ void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
     uint32_t i = 0;
     for (int y = 0; y < yRange; ++y)
         for (int x = 0; x < xRange; ++x)
-            buffer[i++] = imSrc->getMatrix()[y + yStart][x + xStart];
+            buffer[i++] = _color(imSrc, x + xStart, y + yStart);
 
     BITMAPINFOHEADER bmih;
     bmih.biBitCount = 32;
@@ -116,9 +116,19 @@ void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
     BITMAPINFO bmpi = { 0 };
     bmpi.bmiHeader = bmih;
 
-    SetDIBitsToDevice(hdc, xDest, yDest, xRange, yRange,
-        0, 0, 0, yRange, buffer, &bmpi, DIB_RGB_COLORS);
-
+    SetDIBitsToDevice(hdc, //handle to DC
+        xDest,  // x-coord of destination upper-left corner
+        yDest,  // y-coord of destination upper-left corner 
+        xRange, // source rectangle width
+        yRange, // source rectangle height
+        0,      // x-coord of source lower-left corner (bmih.biHeight => upper-left)
+        0,      // y-coord of source lower-left corner (bmih.biHeight => upper-left)
+        0,      // first scan line in array
+        yRange, // number of scan lines
+        buffer, // array of DIB bits
+        &bmpi,  // bitmap information
+        DIB_RGB_COLORS // RGB or palette indexes
+        );
     delete[] buffer;
 }
 
@@ -163,12 +173,13 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
     if (srcWidth == destWidth && srcHeight == destHeight)
         for (int y = 0; y < yRange; ++y)
             for (int x = 0; x < xRange; ++x)
-                buffer[i++] = imSrc->getMatrix()[y + ySrc + yStart][x + xSrc + xStart];
+                buffer[i++] = _color(imSrc, x + xSrc + xStart, y + ySrc + yStart);
     else
         for (int y = 0; y < yRange; ++y)
             for (int x = 0; x < xRange; ++x)
-                buffer[i++] = imSrc->getMatrix()
-                [y*srcHeight / destHeight + ySrc + yStart][x*srcWidth / destWidth + xSrc + xStart];
+                buffer[i++] = _color(imSrc,
+                    x*srcWidth / destWidth + xSrc + xStart,
+                    y*srcHeight / destHeight + ySrc + yStart);
 
     BITMAPINFOHEADER bmih;
     bmih.biBitCount = 32;
@@ -183,9 +194,19 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
     BITMAPINFO bmpi = { 0 };
     bmpi.bmiHeader = bmih;
 
-    SetDIBitsToDevice(hdc, xDest, yDest, xRange, yRange,
-        0, 0, 0, yRange, buffer, &bmpi, DIB_RGB_COLORS);
-
+    SetDIBitsToDevice(hdc, //handle to DC
+        xDest,  // x-coord of destination upper-left corner
+        yDest,  // y-coord of destination upper-left corner 
+        xRange, // source rectangle width
+        yRange, // source rectangle height
+        0,      // x-coord of source lower-left corner (bmih.biHeight => upper-left)
+        0,      // y-coord of source lower-left corner (bmih.biHeight => upper-left)
+        0,      // first scan line in array
+        yRange, // number of scan lines
+        buffer, // array of DIB bits
+        &bmpi,  // bitmap information
+        DIB_RGB_COLORS // RGB or palette indexes
+        );
     delete[] buffer;
 }
 #endif /* _WIN32 */
@@ -230,7 +251,56 @@ void GdiCanvas::rectangle(int left, int top, int right, int bottom,
 // Do not support alpha blend. The alpha channel will be discarded.
 void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
 {
+    if (imSrc->getMatrix() == nullptr)
+        throw std::invalid_argument("ImageMatrix is not initialized");
+    int yRange, yStart;
+    if (yDest < 0) {
+        yRange = yDest + imSrc->getHeight();
+        yStart = -yDest;
+        yDest = 0;
+    }
+    else {
+        yRange = imSrc->getHeight();
+        yStart = 0;
+    }
+
+    int xRange, xStart;
+    if (xDest < 0) {
+        xRange = xDest + imSrc->getWidth();
+        xStart = -xDest;
+        xDest = 0;
+    }
+    else {
+        xRange = imSrc->getWidth();
+        xStart = 0;
+    }
+
+    uint32_t size = xRange * yRange;
+    color* buffer = new color[size];
+    uint32_t i = 0;
+    for (int y = 0; y < yRange; ++y)
+        for (int x = 0; x < xRange; ++x)
+            buffer[i++] = _color(imSrc, x + xStart, y + yStart);
+
+    cairo_format_t format = CAIRO_FORMAT_ARGB32;
+    int stride = cairo_format_stride_for_width(format, xRange);
+    cairo_surface_t *surface = cairo_image_surface_create_for_data(
+        (uint8_t*)buffer, // a pointer to a buffer supplied by the application
+        format, // the format of pixels in the buffer
+        xRange, // the width of the image to be stored in the buffer
+        yRange, // the height of the image to be stored in the buffer
+        stride  // the number of bytes between the start of rows in the buffer as allocated.
+    );
+    cairo_set_source_surface(cr, surface, xDest, yDest);
     
+    cairo_rectangle(cr, xDest, yDest, xRange, yRange);
+    cairo_fill(cr);
+    cairo_stroke(cr); 
+
+    cairo_surface_finish(surface);
+    // cairo_surface_destroy(surface)
+
+    delete[] buffer;
 }
 
 // Do not support alpha blend. The alpha channel will be discarded.
@@ -238,7 +308,68 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
     int xDest, int yDest, int destWidth, int destHeight,
     int xSrc, int ySrc, int srcWidth, int srcHeight) const
 {
+    if (imSrc->getMatrix() == nullptr)
+        throw std::invalid_argument("ImageMatrix is not initialized");
+
+    if (xSrc < 0 || ySrc < 0)
+        return;
+    if (ySrc + srcHeight > imSrc->getHeight() || xSrc + srcWidth > imSrc->getWidth())
+        return;
+
+    int yRange, yStart;
+    if (yDest < 0) {
+        yRange = yDest + destHeight;
+        yStart = -yDest;
+        yDest = 0;
+    }
+    else {
+        yRange = destHeight;
+        yStart = 0;
+    }
+
+    int xRange, xStart;
+    if (xDest < 0) {
+        xRange = xDest + destWidth;
+        xStart = -xDest;
+        xDest = 0;
+    }
+    else {
+        xRange = destWidth;
+        xStart = 0;
+    }
+
+    uint32_t size = xRange * yRange;
+    color* buffer = new color[size];
+    uint32_t i = 0;
+
+    if (srcWidth == destWidth && srcHeight == destHeight)
+        for (int y = 0; y < yRange; ++y)
+            for (int x = 0; x < xRange; ++x)
+                buffer[i++] = _color(imSrc, x + xSrc + xStart, y + ySrc + yStart);
+    else
+        for (int y = 0; y < yRange; ++y)
+            for (int x = 0; x < xRange; ++x)
+                buffer[i++] = _color(imSrc,
+                    x*srcWidth / destWidth + xSrc + xStart,
+                    y*srcHeight / destHeight + ySrc + yStart);
+
+    cairo_format_t format = CAIRO_FORMAT_ARGB32;
+    int stride = cairo_format_stride_for_width(format, xRange);
+    cairo_surface_t *surface = cairo_image_surface_create_for_data(
+        (uint8_t*)buffer, // a pointer to a buffer supplied by the application
+        format, // the format of pixels in the buffer
+        xRange, // the width of the image to be stored in the buffer
+        yRange, // the height of the image to be stored in the buffer
+        stride  // the number of bytes between the start of rows in the buffer as allocated.
+    );
+    cairo_set_source_surface(cr, surface, xDest, yDest);
     
+    cairo_rectangle(cr, xDest, yDest, xRange, yRange);
+    cairo_fill(cr);
+    cairo_stroke(cr); 
+
+    cairo_surface_finish(surface);
+    delete[] buffer;
 }
 
 #endif /* _GTK */

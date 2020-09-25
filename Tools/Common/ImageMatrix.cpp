@@ -16,67 +16,20 @@
 #include <cstring>
 #include "ImageMatrix.h"
 
-pImageMatrix ImageMatrixFactory::fromPixelData(uint32_t* data, uint16_t width, uint16_t height, bool ignoreAlpha)
-{
-    if (width == 0 || height == 0)
-        throw std::invalid_argument("width and height cannot be zero");
-
-    // allocate memory space for image matrix
-    uint32_t **table;
-    try {
-        table = new uint32_t*[height];
-    }
-    catch (std::bad_alloc e) {
-        throw std::runtime_error("Cannot allocate memory");
-    }
-    for (uint16_t y = 0; y < height; ++y) {
-        try {
-            table[y] = new uint32_t[width];
-        }
-        catch (std::bad_alloc e) {
-            while (y)
-                delete[] table[--y];
-            throw std::runtime_error("Cannot allocate memory");
-        }
-        uint32_t* p = table[y];
-        if (ignoreAlpha) {
-            for (uint16_t x = 0; x < width; ++x)
-                p[x] = data[y*width + x] | 0xFF000000;
-        }
-        else {
-            for (uint16_t x = 0; x < width; ++x)
-                p[x] = data[y*width + x];
-        }
-    }
-    return pImageMatrix(new ImageMatrix(table, width, height));
-}
-
 pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t height, uint32_t bkgrdColor)
 {
     if (width == 0 || height == 0)
         throw std::invalid_argument("width and height cannot be zero");
 
     // allocate memory space for image matrix
-    uint32_t **table;
+    uint32_t *table;
     try {
-        table = new uint32_t*[height];
+        table = new uint32_t[width*height];
     }
     catch (std::bad_alloc e) {
         throw std::runtime_error("Cannot allocate memory");
     }
-    for (uint16_t y = 0; y < height; ++y) {
-        try {
-            table[y] = new uint32_t[width];
-        }
-        catch (std::bad_alloc e) {
-            while (y)
-                delete[] table[--y];
-            throw std::runtime_error("Cannot allocate memory");
-        }
-        uint32_t* p = table[y];
-        for (uint16_t x = 0; x < width; ++x)
-            p[x] = bkgrdColor;
-    }
+    memset(table, width * height * sizeof(*table), bkgrdColor);
     return pImageMatrix(new ImageMatrix(table, width, height));
 }
 
@@ -201,9 +154,9 @@ void ImageMatrixFactory::png_read_data_fn(png_structp png_ptr, png_bytep dest, p
     #ifdef _WIN32
     memcpy_s(dest, length, (uint8_t*)mp->addr + mp->has_read, length);
     #endif /* _WIN32 */
-    #ifdef _UNIX
+    #ifdef _GTK
     memcpy(dest, (uint8_t*)mp->addr + mp->has_read, length);
-    #endif /* _UNIX */
+    #endif /* _GTK */
     mp->has_read += length;
 }
 
@@ -220,24 +173,13 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     }
 
     // allocate memory space for image matrix
-    uint32_t **table;
+    uint32_t *table;
     try {
-        table = new uint32_t*[h];
+        table = new uint32_t[w*h];
     }
     catch (std::bad_alloc e) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
         throw std::runtime_error("Cannot allocate memory");
-    }
-    for (uint16_t y = 0; y < h; ++y) {
-        try {
-            table[y] = new uint32_t[w];
-        }
-        catch (std::bad_alloc e) {
-            while (y)
-                delete[] table[--y];
-            png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-            throw std::runtime_error("Cannot allocate memory");
-        }
     }
 
     png_bytep* row_pointers = png_get_rows(png_ptr, info_ptr);
@@ -252,7 +194,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
                     (row[4 * x + 0] << 8 * 2) | // Red
                     (row[4 * x + 1] << 8 * 1) | // Green
                     (row[4 * x + 2] << 8 * 0);  // Blue
-                table[y][x] = argb;
+                table[y * w + x] = argb;
             }
         }
         break;
@@ -265,7 +207,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
                     (row[3 * x + 0] << 8 * 2) | // Red
                     (row[3 * x + 1] << 8 * 1) | // Green
                     (row[3 * x + 2] << 8 * 0);  // Blue
-                table[y][x] = argb;
+                table[y * w + x] = argb;
             }
         }
         break;
@@ -370,7 +312,12 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, FILE *fp)
     /* Flip BGR pixels to RGB. */
     png_set_bgr(png_ptr);
 
-    png_set_rows(png_ptr, info_ptr, (png_bytepp)im->getMatrix());
+    // Generate row pointers of the pixel data.
+    uint32_t **rows = new uint32_t*[im->getHeight()];
+    for (uint32_t i=0; i < im->getHeight(); ++i)
+        rows[i] = im->getMatrix() + i * im->getWidth();
+
+    png_set_rows(png_ptr, info_ptr, (png_bytepp)rows);
 
     /* Set the palette if there is one.  REQUIRED for indexed-color images. */
     //palette = (png_colorp)png_malloc(png_ptr,
@@ -396,6 +343,7 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, FILE *fp)
      */
     //png_free(png_ptr, palette);
     //palette = NULL;
+    delete[] rows;
 
     /* Whenever you use png_free(), it is a good idea to set the pointer to
     * NULL in case your application inadvertently tries to png_free() it
@@ -583,24 +531,13 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
         ((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
 
     // allocate memory space for image matrix
-    uint32_t **table;
+    uint32_t *table;
     try {
-        table = new uint32_t*[h];
+        table = new uint32_t[w*h];
     }
     catch (std::bad_alloc e) {
         jpeg_destroy_decompress(&cinfo);
         throw std::runtime_error("Cannot allocate memory");
-    }
-    for (uint16_t y = 0; y < h; ++y) {
-        try {
-            table[y] = new uint32_t[w];
-        }
-        catch (std::bad_alloc e) {
-            while (y)
-                delete[] table[--y];
-            jpeg_destroy_decompress(&cinfo);
-            throw std::runtime_error("Cannot allocate memory");
-        }
     }
 
     /* Step 6: while (scan lines remain to be read) */
@@ -623,9 +560,9 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
                 buffer[0][x * 3 + 2] << 8 * 0;  // Blue
 
             /*if (rotate180) {
-                table[h - cinfo.output_scanline][w - x - 1] = argb;
+                table[(h - cinfo.output_scanline) * w + (w - x - 1)] = argb;
             } else {*/
-            table[cinfo.output_scanline - 1][x] = argb;
+            table[(cinfo.output_scanline - 1) * w + x] = argb;
             //}
         }
     }
@@ -768,7 +705,8 @@ void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, FILE *fp, uint8_t q
          * Here the array is only one element long, but you could pass
          * more than one scanline at a time if that's more convenient.
          */
-        row_pointer[0] = (JSAMPROW)im->getMatrix()[cinfo.next_scanline];
+        row_pointer[0] = (JSAMPROW)
+            (im->getMatrix() + cinfo.next_scanline * im->getWidth());
         (void)jpeg_write_scanlines(&cinfo, row_pointer, 1);
     }
 

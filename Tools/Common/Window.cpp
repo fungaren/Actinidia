@@ -329,7 +329,7 @@ void Window::looper()
 {
     app = gtk_application_new("cc.moooc.window", G_APPLICATION_FLAGS_NONE);
     g_signal_connect(app, "activate", G_CALLBACK(activate), this);
-    g_application_run(G_APPLICATION(app), argc, argv);
+    g_application_run(G_APPLICATION(app), 0, NULL);
     g_object_unref(app);
 }
 
@@ -391,11 +391,18 @@ std::pair<int, int> Window::getSize() const
 #ifdef UNIT_TEST
 int main(int argc, char* argv[])
 {
+    if (argc < 2)
+        return -1;
+    pImageMatrix im = ImageMatrixFactory::openImage(argv[1]);
     Window w;
     w.argc = argc;
     w.argv = argv;
-    w.setRButtonDownHandler([&w](uint32_t vkeys, int x, int y) {
-        w.alert("hello", "good");
+    int x_pic=0, y_pic=0;
+    w.setRButtonDownHandler([&](uint32_t vkeys, int x, int y) {
+        // w.alert("hello", "good");
+        x_pic = x;
+        y_pic = y;
+        w.refresh();
     });
     w.setKeyDownHandler([&w](int key) {
         if (key < 127) {
@@ -423,6 +430,16 @@ int main(int argc, char* argv[])
         std::tie(width, height) = w.getSize();
         gdi.fillSolidRect(0, 0, width, height, Canvas::Constant::yellow);
         gdi.drawLine(x1, y1, x2, y2, Canvas::LineStyle::none, Canvas::Constant::cyan);
+        if (x_pic != 0 && y_pic != 0)
+        {
+            gdi.paste(im, x_pic-im->getWidth()*0.5, y_pic-im->getHeight()*0.5, 
+                im->getWidth()*0.5, im->getHeight()*0.5, 
+                0, 0, im->getWidth()/2, im->getHeight()/2
+                );
+            gdi.paste(im, x_pic, y_pic, im->getWidth()*0.5, im->getHeight()*0.5, 
+                im->getWidth()/2, im->getHeight()/2, im->getWidth()/2, im->getHeight()/2
+                );
+        }
     });
     w.create(L"demo");
     return 0;

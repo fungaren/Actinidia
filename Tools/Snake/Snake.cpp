@@ -1,12 +1,19 @@
-﻿#include "pch.h"
+﻿/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
+#include <windows.h>
+#undef max
+#include <sstream>
 #include "resource.h"
 #include "Common/Window.h"
 #include "Common/Canvas.h"
 #include "Common/Timer.h"
+#include "Common/Keycodes.h"
 #include "Snake.h"
-#include <sstream>
 
-SnakeView::SnakeView(HINSTANCE i, HWND parent) : hInst(i)
+SnakeView::SnakeView(HINSTANCE i, HWND parent) : 
+    hInst(i), Direction(TORIGHT), Eaten(false), EdgeWidth(0),
+    FoodPosX(0), FoodPosY(0), HeadPosX(0), HeadPosY(0), SnakeLen(0), Using(false)
 {
     w.setElseHandler([](uint32_t message, WPARAM wParam, LPARAM lParam) {
         switch (message) {
@@ -32,23 +39,24 @@ SnakeView::SnakeView(HINSTANCE i, HWND parent) : hInst(i)
 
 void SnakeView::OnDraw(const GdiCanvas& gdi)
 {
+    int width, height;
     auto& size = w.getSize();
+    std::tie(width, height) = size;
     if (GameState == State::Welcome)
     {
-        auto temp = ImageMatrixFactory::createBufferImage(size.first, size.second, BACKGROUNDCOLOR);
+        auto temp = ImageMatrixFactory::createBufferImage(width, height, BACKGROUNDCOLOR);
         auto welcome = ImageMatrixFactory::fromPngResource(IDB_WELCOME, L"PNG", hInst);
-        PiCanvas::blend(temp, welcome, (size.first - welcome->getWidth()) / 2, (size.second - welcome->getHeight()) / 2,
+        PiCanvas::blend(temp, welcome, (width - welcome->getWidth()) / 2, (height - welcome->getHeight()) / 2,
             welcome->getWidth(), welcome->getHeight(), 0, 0, welcome->getWidth(), welcome->getHeight(), 255);
         gdi.paste(temp, 0, 0);
         return;
     }
 
-    std::wostringstream buf;
     // 游戏已经开始，重绘一般由定时器触发，也可能通过窗口缩放触发
     CountEdgeWidth(size);    // 重新计算边宽
 
     // 清空屏幕 设置背景颜色
-    auto img = ImageMatrixFactory::createBufferImage(size.first, size.second, BACKGROUNDCOLOR);
+    auto img = ImageMatrixFactory::createBufferImage(width, height, BACKGROUNDCOLOR);
 
     DrawBoard(img, size);    // 绘制棋盘
     DrawSnake(img);          // 绘制蛇
@@ -60,6 +68,7 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
         gdi.paste(img, 0, 0);
         break;
     case State::GameOver:
+    {
         StopTimer();
         // 产生碰撞效果
         switch (Direction)
@@ -81,9 +90,11 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
         }
         gdi.paste(img, 0, 0);
         // 结束游戏
+        std::wostringstream buf;
         buf << GAMEOVER << SCORE << GamePoint();
         gdi.printText(150, 100, buf.str(), 12, TEXTFONT, TEXTSIZE, FONTCOLOR);
         break;
+    }
     case State::Pause:
         gdi.paste(img, 0, 0);
         // 显示暂停文字
@@ -587,8 +598,8 @@ void SnakeView::OnKeyDown(int key)
 {
     switch (key)
     {
-    case VK_RETURN:
-    case VK_SPACE:
+    case KEY_Return:
+    case KEY_Space:
         switch (GameState)
         {
         case State::GameOver:
@@ -619,7 +630,7 @@ void SnakeView::OnKeyDown(int key)
             break;
         }
         break;
-    case VK_UP:
+    case KEY_Up:
         if (Direction != TODOWN && Using == false)
         {
             // 往下走不能突然向上,被占用时也不能更改方向
@@ -627,7 +638,7 @@ void SnakeView::OnKeyDown(int key)
             Using = true;                       // 开始占用
         }
         break;
-    case VK_DOWN:
+    case KEY_Down:
         if (Direction != TOUP && Using == false)
         {
             // 往上走不能突然向下,被占用时也不能更改方向
@@ -635,7 +646,7 @@ void SnakeView::OnKeyDown(int key)
             Using = true;                       // 开始占用
         }
         break;
-    case VK_LEFT:
+    case KEY_Left:
         if (Direction != TORIGHT && Using == false)
         {
             // 往右走不能突然向左,被占用时也不能更改方向
@@ -643,7 +654,7 @@ void SnakeView::OnKeyDown(int key)
             Using = true;                       // 开始占用
         }
         break;
-    case VK_RIGHT:
+    case KEY_Right:
         if (Direction != TOLEFT && Using == false)
         {
             // 往左走不能突然向右,被占用时也不能更改方向

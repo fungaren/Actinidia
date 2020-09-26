@@ -1,5 +1,9 @@
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #ifdef _WIN32
-    #include "pch.h"
+    #include <windows.h>
+    #undef max
     #ifdef _DEBUG
         #pragma comment(lib, "libpng/libpng16d.lib")
         #pragma comment(lib, "zlib/zlibd.lib")
@@ -24,13 +28,14 @@ pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t heig
     // allocate memory space for image matrix
     uint32_t *table;
     try {
-        table = new uint32_t[width*height];
+        table = new uint32_t[(size_t)width * height];
     }
     catch (std::bad_alloc e) {
         throw std::runtime_error("Cannot allocate memory");
     }
-    memset(table, width * height * sizeof(*table), bkgrdColor);
-    return pImageMatrix(new ImageMatrix(table, width, height));
+    for (size_t i = 0; i < width * height; i++)
+        table[i] = bkgrdColor;
+    return std::shared_ptr<ImageMatrix>(new ImageMatrix(table, width, height));
 }
 
 pImageMatrix ImageMatrixFactory::fromPngFile(const char* pngFile)
@@ -175,7 +180,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     // allocate memory space for image matrix
     uint32_t *table;
     try {
-        table = new uint32_t[w*h];
+        table = new uint32_t[(size_t)w*h];
     }
     catch (std::bad_alloc e) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
@@ -217,7 +222,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     }
     png_destroy_read_struct(&png_ptr, &info_ptr, 0);
 
-    return new ImageMatrix(table, w, h);
+    return std::shared_ptr<ImageMatrix>(new ImageMatrix(table, w, h));
 }
 
 void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const char* filePath)
@@ -519,12 +524,12 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     /* JSAMPLEs per row in output buffer */
     row_stride = cinfo.output_width * cinfo.output_components;
 
-    uint32_t h = cinfo.output_height;
-    uint32_t w = cinfo.output_width;
-    if (w >= UINT16_MAX || h >= UINT16_MAX) {
+    if (cinfo.output_width >= UINT16_MAX || cinfo.output_height >= UINT16_MAX) {
         jpeg_destroy_decompress(&cinfo);
         throw std::runtime_error("Image size is too large");
     }
+    uint16_t w = cinfo.output_width;
+    uint16_t h = cinfo.output_height;
 
     /* Make a one-row-high sample array that will go away when done with image */
     buffer = (*cinfo.mem->alloc_sarray)
@@ -533,7 +538,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     // allocate memory space for image matrix
     uint32_t *table;
     try {
-        table = new uint32_t[w*h];
+        table = new uint32_t[(size_t)w*h];
     }
     catch (std::bad_alloc e) {
         jpeg_destroy_decompress(&cinfo);
@@ -584,7 +589,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     * so as to simplify the setjmp error logic above.  (Actually, I don't
     * think that jpeg_destroy can do an error exit, but why assume anything...)
     */
-    return new ImageMatrix(table, w, h);
+    return std::shared_ptr<ImageMatrix>(new ImageMatrix(table, w, h));
 }
 
 void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const char* filePath, uint8_t quality)

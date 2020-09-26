@@ -1,5 +1,10 @@
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #pragma once
 #ifdef _WIN32
+    #include <windows.h>
+    #undef max
     #include "../libpng/png.h"
     #include "../zlib/zlib.h"
     extern "C" {
@@ -15,6 +20,7 @@
 #include <codecvt>
 #include <locale>
 #include <stdexcept>
+#include <memory>
 
 class Matrix {
 protected:
@@ -29,14 +35,15 @@ public:
 
 class ImageMatrix : Matrix {
     friend class ImageMatrixFactory;
-
-    ImageMatrix(uint32_t *table, uint16_t width, uint16_t height)
-        : matrix(table), width(width), height(height) {}
-
+    
     uint32_t* matrix;
     uint16_t width;
     uint16_t height;
     
+    ImageMatrix(uint32_t *table, uint16_t width, uint16_t height)
+        : matrix(table), width(width), height(height)
+    {}
+
 public:
     ImageMatrix()
         : matrix(nullptr), width(0), height(0) {}
@@ -53,8 +60,7 @@ public:
         src.matrix = nullptr;
     }
 
-    void discardAlphaChannel()
-    {
+    void discardAlphaChannel() noexcept {
         if (matrix == nullptr)
             return;
         for (uint32_t i = 0; i < (uint32_t)width*height; ++i)
@@ -75,7 +81,7 @@ public:
     #define _color(im, x, y) im->getMatrix()[_pos(im, x, y)]
 };
 
-typedef ImageMatrix* pImageMatrix;
+typedef std::shared_ptr<ImageMatrix> pImageMatrix;
 
 class ImageMatrixFactory {
 
@@ -113,29 +119,43 @@ class ImageMatrixFactory {
     static FILE* openfile(const char* path, const char* mode) noexcept(false) {
         FILE *fp;
 #ifdef _WIN32
+        char buffer[240];
         if (fopen_s(&fp, path, mode))
+        {
+            strerror_s(buffer, sizeof buffer, errno);
+            throw std::runtime_error(
+                std::string("Failed to open file: ") + buffer
+            );
+        }
 #endif /* _WIN32 */
 #ifdef _GTK
         fp = fopen(path, mode);
         if (fp == NULL)
-#endif /* _GTK */
             throw std::runtime_error(
                 std::string("Failed to open file: ") + strerror(errno)
             );
+#endif /* _GTK */
         return fp;
     }
     static FILE* openfile(const wchar_t* path, const wchar_t* mode) noexcept(false) {
         FILE *fp;
 #ifdef _WIN32
+        char buffer[240];
         if (_wfopen_s(&fp, path, mode))
+        {
+            strerror_s(buffer, sizeof buffer, errno);
+            throw std::runtime_error(
+                std::string("Failed to open file: ") + buffer
+            );
+        }
 #endif /* _WIN32 */
 #ifdef _GTK
         fp = fopen(utf8(path), utf8(mode));
         if (fp == NULL)
-#endif /* _GTK */
             throw std::runtime_error(
                 std::string("Failed to open file: ") + strerror(errno)
             );
+#endif /* _GTK */
         return fp;
     }
 public:
@@ -148,6 +168,10 @@ public:
         mem_image(void* pImageRes, size_t len)
             : size(len), addr(pImageRes) {}
     };
+
+    static pImageMatrix fromPixelData(uint32_t* data, uint16_t width, uint16_t height) {
+        return std::shared_ptr<ImageMatrix>(new ImageMatrix(data, width, height));
+    }
 
     /**
      * @param width Width of buffer image.

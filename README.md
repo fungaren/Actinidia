@@ -30,11 +30,11 @@ See [*ActinidiaGames*](https://github.com/mooction/ActinidiaGames).
 
 ## Build instructions
 
-This program support both Windows and Linux. 
+This program support both Windows and Linux. Only support x64 systems.
 
 ### Windows
 
-Visual Studio 2017 or newer is required.
+Visual Studio 2019 is required.
 
 ### Linux 
 

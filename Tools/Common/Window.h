@@ -115,10 +115,11 @@ public:
     enum MessageType
     {
 #ifdef _WIN32
-        INFO = WM_INFO,
-        WARNING = WM_WARNING,
-        QUESTION = WM_QUESTION,
-        ERROR = WM_ERROR
+#undef ERROR
+        INFO = MB_ICONINFORMATION,
+        WARNING = MB_ICONWARNING,
+        QUESTION = MB_ICONQUESTION,
+        ERROR = MB_ICONERROR
 #endif /* _WIN32 */
 #ifdef _GTK
         INFO = GTK_MESSAGE_INFO,

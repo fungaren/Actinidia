@@ -1,25 +1,27 @@
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #ifdef _WIN32
-    #include "pch.h"
+    #include <windows.h>
+    #undef max
 #endif /* _WIN32 */
 #ifdef _GTK
 
 #endif /* _GTK */
-#include <iostream>
 #include <string>
-#include <sstream>
-#include <future>
-#include <chrono>
-#include <fstream>
-#include <experimental/filesystem>
-#include <thread>
-#include <map>
-
+#include <filesystem>
 #include "ResourcePack.h"
 #include "Compress.h"
 
 inline void _trace(std::wstring str) {
 #ifdef _DEBUG
-    OutputDebugString((str + L'\n').c_str());
+    OutputDebugStringW((str + L'\n').c_str());
+#endif
+}
+
+inline void _trace(std::string str) {
+#ifdef _DEBUG
+    OutputDebugStringA((str + '\n').c_str());
 #endif
 }
 
@@ -129,9 +131,9 @@ bool generatePack(const std::string& destFile,
     }
     std::ofstream dst(destFile, std::ios::binary);
     if (!dst) {
-        char error_str[1024];
+        char error_str[1000];
         strerror_s(error_str, sizeof error_str, errno);
-        std::cerr << error_str << '\n';
+        _trace(std::string("Failed to output file: ") + error_str);
         return false;
     }
     int result = compress(buffer, dst, 9);

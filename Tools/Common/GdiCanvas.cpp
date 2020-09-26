@@ -2,16 +2,13 @@
  * Copyright (c) 2020, FANG All rights reserved.
  */
 #ifdef _WIN32
-    #include "pch.h"
+    #include <windows.h>
+    #undef max
 #endif /* _WIN32 */
 #ifdef _GTK
     #include <gtk/gtk.h>
 #endif /* _GTK */
-#include <future>
-#include <chrono>
 #include <fstream>
-#include <experimental/filesystem>
-#include <thread>
 #include "ImageMatrix.h"
 #include "Canvas.h"
 

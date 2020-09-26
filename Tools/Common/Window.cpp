@@ -2,7 +2,8 @@
  * Copyright (c) 2020, FANG All rights reserved.
  */
 #ifdef _WIN32
-    #include "pch.h"
+    #include <windows.h>
+    #undef max
 #endif /* _WIN32 */
 #ifdef _GTK
     #include <gtk/gtk.h>
@@ -119,14 +120,14 @@ void Window::refresh()
     InvalidateRect(hWnd, &rc, FALSE);
 }
 
-void Window::alert(const std::string& str, const std::string& title, uint32_t flag) const
+void Window::alert(const char* str, const char* title, MessageType type)
 {
-    MessageBoxA(hWnd, str.c_str(), title.c_str(), flag);
+    MessageBoxA(hWnd, str, title, type | MB_OK);
 }
 
-void Window::alert(const std::wstring& str, const std::wstring& title, uint32_t flag) const
+void Window::alert(const std::wstring& str, const std::wstring& title, MessageType type)
 {
-    MessageBox(hWnd, str.c_str(), title.c_str(), flag);
+    MessageBoxW(hWnd, str.c_str(), title.c_str(), type | MB_OK);
 }
 
 void Window::setTitle(const std::wstring& str)
@@ -145,8 +146,8 @@ std::pair<int, int> Window::getSize() const
 {
     RECT rc;
     GetClientRect(hWnd, &rc);
-    width = rc.right - rc.left;
-    height = rc.bottom - rc.top;
+    width = (uint16_t)(rc.right - rc.left);
+    height = (uint16_t)(rc.bottom - rc.top);
     return { width, height };
 }
 

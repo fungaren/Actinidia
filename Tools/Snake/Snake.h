@@ -1,4 +1,7 @@
-﻿#pragma once
+﻿/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
+#pragma once
 
 // 方向
 #define TOUP     1
@@ -14,7 +17,7 @@
 // 棋盘属性
 #define WID    18
 #define HEI    11
-#define FOOD    -1
+#define FOOD   -1
 #define EMPTY  0
 
 // 游戏选项 蛇的速度（定时器Interval属性）
@@ -52,7 +55,6 @@ class SnakeView
     int FoodPosY;
     int Board[WID + 1][HEI + 1];// 模拟棋盘
     int Direction;              // 运动方向
-    int Mode;                   // 游戏模式
     int EdgeWidth;              // 边宽，不计线宽
     int SnakeLen;               // 蛇的长度
     bool Eaten;                 // 是否吃了东西

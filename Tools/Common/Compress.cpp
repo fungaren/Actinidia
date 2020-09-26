@@ -1,19 +1,18 @@
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #ifdef _WIN32
-    #include "pch.h"
+    #include <windows.h>
+    #undef max
+    #include "../zlib/zlib.h"
 #endif /* _WIN32 */
 #ifdef _GTK
     #define _ASSERT(...) 
+    #include "zlib.h"
 #endif /* _GTK */
-#include <iostream>
 #include <string>
-#include <sstream>
-#include <future>
-#include <chrono>
 #include <fstream>
-#include <experimental/filesystem>
-#include <thread>
-#include <map>
-#include "../zlib/zlib.h"
+#include <filesystem>
 #include "Compress.h"
 
 std::string zerr(int code)
@@ -71,7 +70,7 @@ int compress(std::istream& source, std::ostream& dest, int level)
     // compress until end of file
     do {
         source.read(in, CHUNK);
-        strm.avail_in = source.gcount();
+        strm.avail_in = (uInt)source.gcount();
         if (source.bad()) {
             (void)deflateEnd(&strm);
             return Z_ERRNO;
@@ -123,7 +122,7 @@ int decompress(std::istream& source, std::ostream& dest)
     /* decompress until deflate stream ends or end of file */
     do {
         source.read(in, CHUNK);
-        strm.avail_in = source.gcount();
+        strm.avail_in = (uInt)source.gcount();
         if (source.bad()) {
             (void)deflateEnd(&strm);
             return Z_ERRNO;

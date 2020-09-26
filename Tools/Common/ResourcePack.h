@@ -3,6 +3,8 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
+#include <list>
+#include <functional>
 
 /*
     resource package format:

@@ -1,4 +1,26 @@
-﻿#include "pch.h"
+﻿/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
+#include <windows.h>
+#undef max
+#include <SDKDDKVer.h>
+#include <Commctrl.h>
+#if defined _M_IX86
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls'"\
+" version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls'"\
+" version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls'"\
+" version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls'"\
+" version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+
+#include <thread>
+#include <filesystem>
 #include "resource.h"
 #include "Common/Canvas.h"
 #include "Common/ResourcePack.h"
@@ -29,7 +51,6 @@ inline void enableButtons()
 std::thread task;
 bool userClosed = false;    // if user closed the window, do not update window controls when tasks finished
 
-#include "Common/ResourcePack.h"
 using namespace std::filesystem;
 void deployPack(const std::wstring& destFile, const path& resDirectory)
 {
@@ -431,7 +452,8 @@ bool GenerateFontImage(int chars_per_line)
     DeleteObject(hobmp);
     DeleteDC(hdc);
 
-    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, width, height, true);
+    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, width, height);
+    im->discardAlphaChannel();
     ImageMatrixFactory::dumpPngFile(im, tempPath);
     return true;
 }

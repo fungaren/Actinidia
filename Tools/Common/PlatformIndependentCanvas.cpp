@@ -1,5 +1,8 @@
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #ifdef _WIN32
-    #include "pch.h"
+
 #endif /* _WIN32 */
 #ifdef _GTK
 
@@ -10,7 +13,6 @@
 #include <future>
 #include <chrono>
 #include <fstream>
-#include <experimental/filesystem>
 #include <thread>
 #include <map>
 #include "ImageMatrix.h"
@@ -76,7 +78,7 @@ void PlatformIndependenceCanvas::drawLine(pImageMatrix im, int x1, int y1, int x
                 _color(im, x, y1) = lineColor;
     }
     else {
-        double k = (y2 - y1) / (double)(x2 - x1);
+        double k = ((double)y2 - y1) / ((double)x2 - x1);
         double b = y2 - x2 * k;
         bool p1_outside = x1 < 0 || x1 >= w || y1 < 0 || y1 >= h;
         bool p2_outside = x2 < 0 || x2 >= w || y2 < 0 || y2 >= h;

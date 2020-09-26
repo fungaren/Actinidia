@@ -5,6 +5,18 @@
 #include <codecvt>
 #include <locale>
 
+/**
+ * WARNING:
+ * When you use setXxxHandler() to register a callback, and 
+ * any global variable is referenced in the callback function,
+ * make sure that the global variable is defined in the cpp file
+ * where you use this class. Otherwise you may meet some peculiar 
+ * phenomenon.
+ * For example, when using setXxxHandler() in A.cpp to register
+ * a function, and it is implemented in B.cpp. Then you should put 
+ * the global variable to A.cpp, and at the same time decalre an 
+ * extern varaible in B.cpp.
+ */
 class Window
 {
     std::thread tWnd;

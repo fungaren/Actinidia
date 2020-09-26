@@ -18,17 +18,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pch.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Actinidia.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -36,9 +30,6 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\Tools\Common\ImageMatrix.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Tools\Common\PlatformIndependentCanvas.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\Tools\Common\ResourcePack.cpp">
@@ -51,6 +42,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\Tools\Common\Compress.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Tools\Common\PiCanvas.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>

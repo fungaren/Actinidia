@@ -1,18 +1,17 @@
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #ifdef _WIN32
-    #include "pch.h"
+    #include <windows.h>
+    #undef max
     #undef PlaySound 
 #endif /* _WIN32 */
 #ifdef _GTK
 
 #endif /* _GTK */
-#include <iostream>
 #include <string>
-#include <sstream>
-#include <future>
-#include <chrono>
+#include <filesystem>
 #include <fstream>
-#include <experimental/filesystem>
-#include <thread>
 #include <map>
 #include "../Tools/Common/Window.h"
 #include "../Tools/Common/Canvas.h"
@@ -29,6 +28,7 @@ extern pResourcePack pack;
 extern Window w;
 extern bool bDirectMode;
 extern std::map<const std::string, std::string> user_data;
+extern std::map<size_t, pImageMatrix> im_handles;
 
 //==============================================
 //=        Global functions for lua            =
@@ -44,9 +44,11 @@ int CreateImage(lua_State *L)
     lua_pop(L, 2);
     try {
         auto g = ImageMatrixFactory::createBufferImage(width, height);
-        lua_pushinteger(L, (lua_Integer)g);
+        auto key = std::hash<pImageMatrix>{}(g);
+        lua_pushinteger(L, (lua_Integer)key);
+        im_handles.insert({ key, g });
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "ERROR", MB_ICONERROR);
+        w.alert(e.what(), "ERROR", Window::ERROR);
     }
     return 1;
 }
@@ -62,9 +64,11 @@ int CreateImageEx(lua_State *L)
     lua_pop(L, 3);
     try {
         auto g = ImageMatrixFactory::createBufferImage(width, height, Canvas::color(c));
-        lua_pushinteger(L, (lua_Integer)g);
+        auto key = std::hash<pImageMatrix>{}(g);
+        lua_pushinteger(L, (lua_Integer)key);
+        im_handles.insert({ key, g });
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "ERROR", MB_ICONERROR);
+        w.alert(e.what(), "ERROR", Window::ERROR);
     }
     return 1;
 }
@@ -79,9 +83,11 @@ int CreateTransImage(lua_State *L)
     lua_pop(L, 2);
     try {
         auto g = ImageMatrixFactory::createBufferImage(width, height, Canvas::Constant::alpha);
-        lua_pushinteger(L, (lua_Integer)g);
+        auto key = std::hash<pImageMatrix>{}(g);
+        lua_pushinteger(L, (lua_Integer)key);
+        im_handles.insert({ key, g });
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "ERROR", MB_ICONERROR);
+        w.alert(e.what(), "ERROR", Window::ERROR);
     }
     return 1;
 }
@@ -91,9 +97,9 @@ int DeleteImage(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 1) return 0;
-    auto g = (ImageMatrix*)lua_tointeger(L, 1);
+    auto key = (size_t)lua_tointeger(L, 1);
     lua_pop(L, 1);
-    delete g;
+    im_handles.erase(key);
     return 0;
 }
 
@@ -102,9 +108,9 @@ int GetWidth(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 1) return 0;
-    auto g = (ImageMatrix*)lua_tointeger(L, 1);
+    auto key = (size_t)lua_tointeger(L, 1);
     lua_pop(L, 1);
-    lua_pushinteger(L, g->getWidth());
+    lua_pushinteger(L, im_handles[key]->getWidth());
     return 1;
 }
 
@@ -113,9 +119,9 @@ int GetHeight(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 1) return 0;
-    auto g = (ImageMatrix*)lua_tointeger(L, 1);
+    auto key = (size_t)lua_tointeger(L, 1);
     lua_pop(L, 1);
-    lua_pushinteger(L, g->getHeight());
+    lua_pushinteger(L, im_handles[key]->getHeight());
     return 1;
 }
 
@@ -162,15 +168,16 @@ int GetImage(lua_State *L)
     lua_pop(L, 1);
     char* p;
     uint32_t size;
-    pImageMatrix g;
     if (bDirectMode) {
         try {
-            g = ImageMatrixFactory::openImage(("./game/" + f).c_str());
-            lua_pushinteger(L, (lua_Integer)g);
+            pImageMatrix g = ImageMatrixFactory::openImage(("./game/" + f).c_str());
+            auto key = std::hash<pImageMatrix>{}(g);
+            lua_pushinteger(L, (lua_Integer)key);
+            im_handles.insert({ key, g });
             return 1;
         }
         catch (std::runtime_error e) {
-            w.alert(e.what(), "ERROR", MB_ICONERROR);
+            w.alert(e.what(), "ERROR", Window::ERROR);
         }
     }
     else
@@ -178,16 +185,19 @@ int GetImage(lua_State *L)
         if (pack->readResource("./game/" + f, &p, &size))
         {
             try {
+                pImageMatrix g;
                 std::string extname = f.substr(f.size() - 3, 3);
                 if (extname == "png" || extname == "PNG")
                     g = ImageMatrixFactory::fromPngBuffer(p, size);
                 else
                     g = ImageMatrixFactory::fromJpegBuffer(p, size);
-                lua_pushinteger(L, (lua_Integer)g);
+                auto key = std::hash<pImageMatrix>{}(g);
+                lua_pushinteger(L, (lua_Integer)key);
+                im_handles.insert({ key, g });
                 return 1;
             }
             catch (std::runtime_error e) {
-                w.alert(e.what(), "ERROR", MB_ICONERROR);
+                w.alert(e.what(), "ERROR", Window::ERROR);
             }
         }
     }
@@ -247,15 +257,15 @@ int PasteToImage(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 4) return 0;
-    auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
-    auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
+    auto keyDest = (size_t)lua_tointeger(L, 1);
+    auto keySrc = (size_t)lua_tointeger(L, 2);
     int x = (int)lua_tointeger(L, 3);
     int y = (int)lua_tointeger(L, 4);
     lua_pop(L, 4);
     try {
-        PiCanvas::blend(gDest, gSrc, x, y, 255);
+        PiCanvas::blend(im_handles[keyDest], im_handles[keySrc], x, y, 255);
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "ERROR", MB_ICONERROR);
+        w.alert(e.what(), "ERROR", Window::ERROR);
     }
     return 0;
 }
@@ -265,8 +275,8 @@ int PasteToImageEx(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 10) return 0;
-    auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
-    auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
+    auto keyDest = (size_t)lua_tointeger(L, 1);
+    auto keySrc = (size_t)lua_tointeger(L, 2);
     int xDest = (int)lua_tointeger(L, 3);
     int yDest = (int)lua_tointeger(L, 4);
     int DestWidth = (int)lua_tointeger(L, 5);
@@ -277,10 +287,11 @@ int PasteToImageEx(lua_State *L)
     int SrcHeight = (int)lua_tointeger(L, 10);
     lua_pop(L, 10);
     try {
-        PiCanvas::blend(gDest, gSrc, xDest, yDest, DestWidth, DestHeight,
+        PiCanvas::blend(im_handles[keyDest], im_handles[keySrc],
+            xDest, yDest, DestWidth, DestHeight,
             xSrc, ySrc, SrcWidth, SrcHeight, 255);
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "Error", MB_ICONERROR);
+        w.alert(e.what(), "Error", Window::ERROR);
     }
     return 0;
 }
@@ -290,16 +301,16 @@ int AlphaBlend(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 5) return 0;
-    auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
-    auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
+    auto keyDest = (size_t)lua_tointeger(L, 1);
+    auto keySrc = (size_t)lua_tointeger(L, 2);
     int xDest = (int)lua_tointeger(L, 3);
     int yDest = (int)lua_tointeger(L, 4);
     unsigned char Opacity = (unsigned char)lua_tointeger(L, 5);
     lua_pop(L, 5);
     try {
-        PiCanvas::blend(gDest, gSrc, xDest, yDest, Opacity);
+        PiCanvas::blend(im_handles[keyDest], im_handles[keySrc], xDest, yDest, Opacity);
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "Error", MB_ICONERROR);
+        w.alert(e.what(), "Error", Window::ERROR);
     }
     return 0;
 }
@@ -309,8 +320,8 @@ int AlphaBlendEx(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 11) return 0;
-    auto gDest = (ImageMatrix*)lua_tointeger(L, 1);
-    auto gSrc = (ImageMatrix*)lua_tointeger(L, 2);
+    auto keyDest = (size_t)lua_tointeger(L, 1);
+    auto keySrc = (size_t)lua_tointeger(L, 2);
     int xDest = (int)lua_tointeger(L, 3);
     int yDest = (int)lua_tointeger(L, 4);
     int DestWidth = (int)lua_tointeger(L, 5);
@@ -322,10 +333,10 @@ int AlphaBlendEx(lua_State *L)
     unsigned char Opacity = (unsigned char)lua_tointeger(L, 11);
     lua_pop(L, 11);
     try {
-        PiCanvas::blend(gDest, gSrc, xDest, yDest, DestWidth, DestHeight,
+        PiCanvas::blend(im_handles[keyDest], im_handles[keySrc], xDest, yDest, DestWidth, DestHeight,
             xSrc, ySrc, SrcWidth, SrcHeight, Opacity);
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "Error", MB_ICONERROR);
+        w.alert(e.what(), "Error", Window::ERROR);
     }
     return 0;
 }
@@ -336,12 +347,12 @@ int PasteToWnd(lua_State *L)
     int n = lua_gettop(L);
     if (n != 2) return 0;
     auto wnd = (GdiCanvas*)lua_tointeger(L, 1);
-    auto g = (ImageMatrix*)lua_tointeger(L, 2);
+    auto key = (size_t)lua_tointeger(L, 2);
     lua_pop(L, 2);
     try {
-        wnd->paste(g, 0, 0);
+        wnd->paste(im_handles[key], 0, 0);
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "Error", MB_ICONERROR);
+        w.alert(e.what(), "Error", Window::ERROR);
     }
     return 0;
 }
@@ -352,7 +363,7 @@ int PasteToWndEx(lua_State *L)
     int n = lua_gettop(L);
     if (n != 10) return 0;
     auto wnd = (GdiCanvas*)lua_tointeger(L, 1);
-    auto g = (ImageMatrix*)lua_tointeger(L, 2);
+    auto key = (size_t)lua_tointeger(L, 2);
     int xDest = (int)lua_tointeger(L, 3);
     int yDest = (int)lua_tointeger(L, 4);
     int DestWidth = (int)lua_tointeger(L, 5);
@@ -363,10 +374,10 @@ int PasteToWndEx(lua_State *L)
     int SrcHeight = (int)lua_tointeger(L, 10);
     lua_pop(L, 10);
     try {
-        wnd->paste(g, xDest, yDest, DestWidth, DestHeight,
+        wnd->paste(im_handles[key], xDest, yDest, DestWidth, DestHeight,
             xSrc, ySrc, SrcWidth, SrcHeight);
     } catch (std::runtime_error e) {
-        w.alert(e.what(), "Error", MB_ICONERROR);
+        w.alert(e.what(), "Error", Window::ERROR);
     }
     return 0;
 }
@@ -447,7 +458,8 @@ int Screenshot(lua_State *L)
     DeleteDC(hdc);
 
     // DUMP TO FILE
-    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, bmpObj.bmWidth, bmpObj.bmHeight, true);
+    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, bmpObj.bmWidth, bmpObj.bmHeight);
+    im->discardAlphaChannel();
     ImageMatrixFactory::dumpPngFile(im, szFileName);
 
     lua_pushboolean(L, true);
@@ -487,6 +499,8 @@ int SaveSetting(lua_State *L)
 //=                  Callback                  =
 //==============================================
 
+extern const int MIN_WIDTH;
+extern const int MIN_HEIGHT;
 bool LuaInit()
 {
     BASS_Init(-1, 44100, 0, 0, 0);
@@ -589,14 +603,14 @@ bool LuaInit()
         lua_setfield(L, -2, "screenheight");
 
         lua_getglobal(L, "OnCreate");
-        lua_pcall(L, 0, 0, 0);
+        lua_pcall(L, 0, 0, 0); // call OnCreate
 
         if (p) delete p;
         return true;
     }
     else
     {
-        w.alert(L"Fail to load main script!", L"Error", MB_ICONERROR);
+        w.alert(L"Fail to load main script!", L"Error", Window::ERROR);
         return false;
     }
 }

@@ -188,7 +188,7 @@ void dialogInit()
     auto temp = ImageMatrixFactory::createBufferImage(logo->getWidth() / 2, logo->getHeight() / 2, 0xFFF0F0F0);
     PiCanvas::blend(temp, logo, 0, 0, logo->getWidth() / 2, logo->getHeight() / 2,
         0, 0, logo->getWidth(), logo->getHeight(), 0xFF);
-    logo = std::move(temp);
+    logo = temp;
 }
 
 inline void setOFN(OPENFILENAME& ofn, LPCTSTR lpstrFilter, LPCTSTR lpstrDefExt)

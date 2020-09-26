@@ -29,7 +29,7 @@
     <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ActinidiaWin32.cpp">
+    <ClCompile Include="Actinidia.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\Tools\Common\GdiCanvas.cpp">
@@ -55,7 +55,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="ActinidiaWin32.rc">
+    <ResourceCompile Include="Actinidia.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
   </ItemGroup>

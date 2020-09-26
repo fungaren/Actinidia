@@ -22,8 +22,9 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{8DA7A835-78A2-4703-973A-1A9C5946C58B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ActinidiaWin32</RootNamespace>
+    <RootNamespace>Actinidia</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Actinidia</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -177,7 +178,7 @@
     <ClCompile Include="..\Tools\Common\PlatformIndependentCanvas.cpp" />
     <ClCompile Include="..\Tools\Common\ResourcePack.cpp" />
     <ClCompile Include="..\Tools\Common\Window.cpp" />
-    <ClCompile Include="ActinidiaWin32.cpp" />
+    <ClCompile Include="Actinidia.cpp" />
     <ClCompile Include="Interface.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -187,7 +188,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="ActinidiaWin32.rc" />
+    <ResourceCompile Include="Actinidia.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="small.ico" />

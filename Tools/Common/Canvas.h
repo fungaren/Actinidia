@@ -8,8 +8,12 @@ public:
 
     typedef uint8_t CharStyle;
     
-    // 0xAARRGGBB (A: opacity, R: red, G: green, B: blue)
+    /**
+     * 32bits color, format ARGB (0xAARRGGBB)
+     * A: opacity, R: red, G: green, B: blue.
+     */
     typedef uint32_t color;
+
     static inline uint8_t alphaChannel(color c) {
         return (uint8_t)(c >> 24);
     }
@@ -54,11 +58,15 @@ public:
         static const CharStyle style_underline  = { 1 << 5 };
     };
 
+    /**
+     * @param The ARGB format color.
+     * @return The ABGR format color.
+     */
     static color toABGR(color argb) {
-        uint8_t b = (uint8_t)(argb >> 8 * 0);
-        uint8_t r = (uint8_t)(argb >> 8 * 2);
+        uint8_t b = (uint8_t)argb;
+        uint8_t r = (uint8_t)(argb >> 16);
         argb &= 0xFF00FF00;
-        return argb | (b << 8 * 2) | r;
+        return argb | (b << 16) | r;
     }
 
     enum LineStyle {
@@ -76,64 +84,158 @@ public:
 #endif /* _WIN32 */
     };
 
-    /*
-     * @param int opacity: 0-255
+    /**
+     * @param dest color1
+     * @param src color2
+     * @param opacity blend color2 to color1 with opacity (0-255).
+     * @return Color after blend color1 and color2. If opacity is 0
+     *         return color1. If opacity is 255, return color2.
      */
     static color blend(color dest, color src, uint8_t opacity) {
+#if 0
+        uint8_t ch_d_alpha = dest >> 24;
+        uint8_t ch_s_alpha = src >> 24;
+        uint8_t ch_d_red = dest >> 16;
+        uint8_t ch_s_red = src >> 16;
+        uint8_t ch_d_green = dest >> 8;
+        uint8_t ch_s_green = src >> 8;
+        uint8_t ch_d_blue = dest;
+        uint8_t ch_s_blue = src;
+        
+        color mixed_alpha = ch_s_alpha + ch_d_alpha;
+        opacity = ch_s_alpha * opacity / 256;  // divide by 256 for better performance
+        mixed_alpha = mixed_alpha > 255 ? 0xFF000000 : mixed_alpha << 24;
+
+        color mixed_red = (ch_s_red * opacity + ch_d_red * (255 - opacity)) / 256;
+        color mixed_green = (ch_s_green * opacity + ch_d_green * (255 - opacity)) / 256;
+        color mixed_blue = (ch_s_blue * opacity + ch_d_blue * (255 - opacity)) / 256;
+        return mixed_alpha | mixed_red << 16 | mixed_green << 8 | mixed_blue;
+#else
         // Alpha
-        uint32_t channel_src = src >> 8 * 3;
-        uint32_t channel_dst = dest >> 8 * 3;
-        opacity = channel_src * opacity / 256;  // divide by 256 for better performance
-        color mixed = channel_src + channel_dst;
+        uint32_t ch_src = src >> 24;
+        uint32_t ch_dst = dest >> 24;
+        opacity = ch_src * opacity / 256;  // divide by 256 for better performance
+        color mixed = ch_src + ch_dst;
         mixed = mixed > 255 ? 0xFF00 : mixed << 8;
         // Red
-        channel_src = (src >> 8 * 2) & 0xFF;
-        channel_dst = (dest >> 8 * 2) & 0xFF;
-        mixed |= (channel_src * opacity + channel_dst * (255 - opacity)) / 256;
+        ch_src = (src >> 16) & 0xFF;
+        ch_dst = (dest >> 16) & 0xFF;
+        mixed |= (ch_src * opacity + ch_dst * (255 - opacity)) / 256;
         mixed <<= 8;
         // Green
-        channel_src = (src >> 8 * 1) & 0xFF;
-        channel_dst = (dest >> 8 * 1) & 0xFF;
-        mixed |= (channel_src * opacity + channel_dst * (255 - opacity)) / 256;
+        ch_src = (src >> 8) & 0xFF;
+        ch_dst = (dest >> 8) & 0xFF;
+        mixed |= (ch_src * opacity + ch_dst * (255 - opacity)) / 256;
         mixed <<= 8;
         // Blue
-        channel_src = (src >> 8 * 0) & 0xFF;
-        channel_dst = (dest >> 8 * 0) & 0xFF;
-        mixed |= (channel_src * opacity + channel_dst * (255 - opacity)) / 256;
+        ch_src = src & 0xFF;
+        ch_dst = dest & 0xFF;
+        mixed |= (ch_src * opacity + ch_dst * (255 - opacity)) / 256;
         return mixed;
+#endif
     }
 };
 
-class PlatformIndependenceCanvas : Canvas
+/**
+ * @class PiCanvas
+ * @brief Platform-independent Canvas
+ */
+class PiCanvas : Canvas
 {
-    PlatformIndependenceCanvas();
+    PiCanvas();
 public:
+    /**
+     * @param im ImageMatrix handle.
+     * @param x x-coordinate.
+     * @param y y-coordinate.
+     * @return The color of the pixel at (x, y).
+     */
     static color getPixel(const pImageMatrix im, int x, int y) noexcept(false);
 
+    /**
+     * @param im ImageMatrix handle.
+     * @param left 
+     * @param top 
+     * @param right 
+     * @param bottom 
+     * @param fillColor Fill the rectangle with the color.
+     */
     static void fillSolidRect(pImageMatrix im, int left, int top, int right, int bottom, color fillColor);
 
-    static bool printText(pImageMatrix im, int x, int y, std::wstring str, uint16_t len,
+    /**
+     * @param im ImageMatrix handle.
+     * @param x The x-coordinate where to draw text.
+     * @param y The y-coordinate where to draw text.
+     * @param str The text need to draw.
+     * @param len The length of text that need to draw.
+     * @param fontName The font name used to draw text.
+     * @param fontColor Draw text with the color.
+     * @param style The text style (@ref style_default, @ref style_bold, 
+     *        @ref style_itatic, @ref style_underline).
+     */
+    static void printText(pImageMatrix im, int x, int y, std::wstring str, uint16_t len,
         std::wstring fontName, uint8_t fontSize, color fontColor = Constant::black,
         CharStyle style = Constant::style_default) {
-        return false;
+        return;
     }
 
+    /**
+     * @param im ImageMatrix handle.
+     * @param x1 The x-coordinate of line start.
+     * @param y1 The y-coordinate of line start.
+     * @param x2 The x-coordinate of line end.
+     * @param y2 The y-coordinate of line end.
+     * @param ls The line style of the rectangle. Default is @ref solid.
+     * @param lineColor Use the color to draw rectangle. Default is black.
+     */
     static void drawLine(pImageMatrix im, int x1, int y1, int x2, int y2,
         LineStyle ls = LineStyle::solid, color lineColor = Constant::black);
 
+    /**
+     * @param im ImageMatrix handle.
+     * @param left 
+     * @param top 
+     * @param right 
+     * @param bottom 
+     * @param ls The line style of the rectangle. Default is @ref solid.
+     * @param lineColor Use the color to draw rectangle. Default is black.
+     */
     static void rectangle(pImageMatrix im, int left, int top, int right, int bottom,
         LineStyle ls = LineStyle::solid, color lineColor = Constant::black);
 
+    /**
+     * @param imDest ImageMatrix handle of destination.
+     * @param imSrc ImageMatrix handle of source.
+     * @param xDest The x-coordinate where to paste.
+     * @param yDest The y-coordinate where to paste.
+     * @param opacity Opacity of imSrc to blend (0-255).
+     */
     static void blend(pImageMatrix imDest, const pImageMatrix imSrc,
         int xDest, int yDest, uint8_t opacity);
 
+    /**
+     * @param imDest ImageMatrix handle of destination.
+     * @param imSrc ImageMatrix handle of source.
+     * @param xDest The x-coordinate where to paste.
+     * @param yDest The y-coordinate where to paste.
+     * @param destWidth The width of destinate paste area.
+     * @param destHeight The height of destinate paste area.
+     * @param xSrc The x-coordinate from where to copy.
+     * @param ySrc The y-coordinate from where to copy.
+     * @param srcWidth The width of original copy area.
+     * @param srcHeight The height of original copy area.
+     * @param opacity Opacity of imSrc to blend.
+     */
     static void blend(pImageMatrix imDest, const pImageMatrix imSrc,
         int xDest, int yDest, int destWidth, int destHeight,
         int xSrc, int ySrc, int srcWidth, int srcHeight, uint8_t opacity);
 };
 
-typedef PlatformIndependenceCanvas PiCanvas;
-
+/**
+ * @class GdiCanvas
+ * @brief Platform-dependent Canvas. For Windows, it is implemented by GDI.
+ *        For Linux GTK+, it is implemented by Cairo.
+ */
 class GdiCanvas : Canvas
 {
 private:
@@ -170,6 +272,13 @@ public:
 #endif /* _GTK */
     GdiCanvas(GdiCanvas&) = delete;
 
+    /**
+     * @param left
+     * @param top
+     * @param right
+     * @param bottom
+     * @param fillColor Fill the rectangle with the color.
+     */
     void fillSolidRect(int left, int top, int right, int bottom, color fillColor) const;
 
     //const unsigned int format = DT_NOPREFIX | DT_WORDBREAK | DT_EDITCONTROL | DT_NOCLIP | DT_HIDEPREFIX;
@@ -195,16 +304,48 @@ public:
         std::wstring fontName, uint8_t fontSize, color fontColor = Constant::black, 
         CharStyle style = Constant::style_default) const;
 
+    /**
+     * @param x1 The x-coordinate of line start.
+     * @param y1 The y-coordinate of line start.
+     * @param x2 The x-coordinate of line end.
+     * @param y2 The y-coordinate of line end.
+     * @param ls The line style of the rectangle. Default is @ref solid.
+     * @param lineColor Use the color to draw rectangle. Default is black.
+     */
     void drawLine(int x1, int y1, int x2, int y2,
         LineStyle ls = LineStyle::solid, color lineColor = Constant::black) const;
 
+    /**
+     * @param left
+     * @param top
+     * @param right
+     * @param bottom
+     * @param ls The line style of the rectangle. Default is @ref solid.
+     * @param lineColor Use the color to draw rectangle. Default is black.
+     */
     void rectangle(int left, int top, int right, int bottom,
         LineStyle ls = LineStyle::solid, color lineColor = Constant::black) const;
 
-    // Do not support alpha blend. The alpha channel will be discarded.
+    /**
+     * @param imSrc ImageMatrix handle.
+     * @param xDest The x-coordinate where to paste.
+     * @param yDest The y-coordinate where to paste.
+     * @note Do not support alpha blend. The alpha channel will be discarded.
+     */
     void paste(const pImageMatrix imSrc, int xDest, int yDest) const;
 
-    // Do not support alpha blend. The alpha channel will be discarded.
+    /**
+     * @param imSrc ImageMatrix handle.
+     * @param xDest The x-coordinate where to paste.
+     * @param yDest The y-coordinate where to paste.
+     * @param destWidth The width of destinate paste area.
+     * @param destHeight The height of destinate paste area.
+     * @param xSrc The x-coordinate from where to copy.
+     * @param ySrc The y-coordinate from where to copy.
+     * @param srcWidth The width of original copy area.
+     * @param srcHeight The height of original copy area.
+     * @note Do not support alpha blend. The alpha channel will be discarded.
+     */
     void paste(const pImageMatrix imSrc,
         int xDest, int yDest, int destWidth, int destHeight,
         int xSrc, int ySrc, int srcWidth, int srcHeight) const;

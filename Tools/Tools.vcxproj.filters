@@ -38,9 +38,6 @@
     <ClCompile Include="Common\ImageMatrix.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Common\PlatformIndependentCanvas.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="Common\Window.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -51,6 +48,9 @@
       <Filter>Snake</Filter>
     </ClCompile>
     <ClCompile Include="Common\Compress.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\PiCanvas.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>

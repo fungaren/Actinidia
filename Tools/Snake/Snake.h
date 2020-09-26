@@ -100,7 +100,7 @@ public:
 
 // 绘制向上的头
 inline void DrawHeadToUp(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::color color) {
-    PlatformIndependenceCanvas::fillSolidRect(
+    PiCanvas::fillSolidRect(
         img, 
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
         EdgeWidth * (y - 1) + y + EdgeWidth / 4,
@@ -112,7 +112,7 @@ inline void DrawHeadToUp(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::
 
 // 绘制向下的头
 inline void DrawHeadToDown(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::color color) {
-    PlatformIndependenceCanvas::fillSolidRect(
+    PiCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
         EdgeWidth * (y - 1) + y - 1,
@@ -124,7 +124,7 @@ inline void DrawHeadToDown(pImageMatrix img, int EdgeWidth, int x, int y, Canvas
 
 // 绘制向左的头
 inline void DrawHeadToLeft(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::color color) {
-    PlatformIndependenceCanvas::fillSolidRect(
+    PiCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x + EdgeWidth / 4,
         EdgeWidth * (y - 1) + y + EdgeWidth / 4,
@@ -136,7 +136,7 @@ inline void DrawHeadToLeft(pImageMatrix img, int EdgeWidth, int x, int y, Canvas
 
 // 绘制向右的头
 inline void DrawHeadToRight(pImageMatrix img, int EdgeWidth, int x, int y, Canvas::color color) {
-    PlatformIndependenceCanvas::fillSolidRect(
+    PiCanvas::fillSolidRect(
         img,
         EdgeWidth * (x - 1) + x - 1,
         EdgeWidth * (y - 1) + y + EdgeWidth / 4,

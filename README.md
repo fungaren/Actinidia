@@ -4,7 +4,7 @@ Using Lua to write your games running on Windows10/Android. Only x64 system are 
 
 ## Parts
 
-### [ActinidiaWin32](ActinidiaWin32)
+### [Actinidia](Actinidia)
 
 You can drag any resource file (`*.res`) onto the program to launch the game. If no resource file specified, the program will run scripts in the `game.res` file of current directory. If no such file in the directory, the program will be under *direct mode* and launch scripts in the `game` folder.
 

@@ -170,7 +170,7 @@
     <ClCompile Include="Common\Compress.cpp" />
     <ClCompile Include="Common\GdiCanvas.cpp" />
     <ClCompile Include="Common\ImageMatrix.cpp" />
-    <ClCompile Include="Common\PlatformIndependentCanvas.cpp" />
+    <ClCompile Include="Common\PiCanvas.cpp" />
     <ClCompile Include="Common\ResourcePack.cpp" />
     <ClCompile Include="Common\Window.cpp" />
     <ClCompile Include="Snake\Snake.cpp" />

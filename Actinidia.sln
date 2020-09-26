@@ -12,7 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GameHost", "GameHost\GameHost.vcxproj", "{777C453A-496B-4D5C-93E2-DA0443123097}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ActinidiaWin32", "ActinidiaWin32\ActinidiaWin32.vcxproj", "{8DA7A835-78A2-4703-973A-1A9C5946C58B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Actinidia", "Actinidia\Actinidia.vcxproj", "{8DA7A835-78A2-4703-973A-1A9C5946C58B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

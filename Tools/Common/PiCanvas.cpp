@@ -7,18 +7,10 @@
 #ifdef _GTK
 
 #endif /* _GTK */
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <future>
-#include <chrono>
-#include <fstream>
-#include <thread>
-#include <map>
 #include "ImageMatrix.h"
 #include "Canvas.h"
 
-Canvas::color PlatformIndependenceCanvas::getPixel(const pImageMatrix im, int x, int y) noexcept(false)
+Canvas::color PiCanvas::getPixel(const pImageMatrix im, int x, int y) noexcept(false)
 {
     if (x < 0 || y < 0 || x >= im->getWidth() || y >= im->getHeight())
         throw (std::invalid_argument("Coordinate out of range"));
@@ -26,7 +18,7 @@ Canvas::color PlatformIndependenceCanvas::getPixel(const pImageMatrix im, int x,
         return _color(im, x, y);
 }
 
-void PlatformIndependenceCanvas::fillSolidRect(pImageMatrix im, int left, int top, int right, int bottom, color fillColor)
+void PiCanvas::fillSolidRect(pImageMatrix im, int left, int top, int right, int bottom, color fillColor)
 {
     if (im->getMatrix() == nullptr)
         throw std::invalid_argument("ImageMatrix is not initialized");
@@ -43,7 +35,7 @@ void PlatformIndependenceCanvas::fillSolidRect(pImageMatrix im, int left, int to
     }
 }
 
-void PlatformIndependenceCanvas::drawLine(pImageMatrix im, int x1, int y1, int x2, int y2, LineStyle ls, color lineColor)
+void PiCanvas::drawLine(pImageMatrix im, int x1, int y1, int x2, int y2, LineStyle ls, color lineColor)
 {
     if (im->getMatrix() == nullptr)
         throw std::invalid_argument("ImageMatrix is not initialized");
@@ -197,7 +189,7 @@ void PlatformIndependenceCanvas::drawLine(pImageMatrix im, int x1, int y1, int x
     }
 }
 
-void PlatformIndependenceCanvas::rectangle(pImageMatrix im, int left, int top, int right, int bottom, LineStyle ls, color lineColor)
+void PiCanvas::rectangle(pImageMatrix im, int left, int top, int right, int bottom, LineStyle ls, color lineColor)
 {
     drawLine(im, left, top, right, top, ls, lineColor);
     drawLine(im, left, top, left, bottom, ls, lineColor);
@@ -205,7 +197,7 @@ void PlatformIndependenceCanvas::rectangle(pImageMatrix im, int left, int top, i
     drawLine(im, left, bottom, right, bottom, ls, lineColor);
 }
 
-void PlatformIndependenceCanvas::blend(pImageMatrix imDest, const pImageMatrix imSrc,
+void PiCanvas::blend(pImageMatrix imDest, const pImageMatrix imSrc,
     int xDest, int yDest, uint8_t opacity)
 {
     if (imDest->getMatrix() == nullptr || imSrc->getMatrix() == nullptr)
@@ -245,7 +237,7 @@ void PlatformIndependenceCanvas::blend(pImageMatrix imDest, const pImageMatrix i
     }
 }
 
-void PlatformIndependenceCanvas::blend(pImageMatrix imDest, const pImageMatrix imSrc,
+void PiCanvas::blend(pImageMatrix imDest, const pImageMatrix imSrc,
     int xDest, int yDest, int destWidth, int destHeight,
     int xSrc, int ySrc, int srcWidth, int srcHeight, uint8_t opacity)
 {

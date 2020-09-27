@@ -6,9 +6,10 @@
     #undef max
 #endif /* _WIN32 */
 #ifdef _GTK
-
+    #define _ASSERT(...) 
 #endif /* _GTK */
 #include <string>
+#include <cstring>
 #include <filesystem>
 #include "ResourcePack.h"
 #include "Compress.h"
@@ -114,7 +115,7 @@ bool generatePack(const std::string& destFile,
     std::stringstream buffer;
     buffer << MAGIC; // Magic
     for (auto& t : queue) {
-        buffer.write((char*)&std::get<0>(t), sizeof entity); // Entity
+        buffer.write((char*)&std::get<0>(t), sizeof(entity)); // Entity
         buffer << std::get<1>(t); // Name
         if (std::get<2>(t).has_value())
         {
@@ -131,8 +132,13 @@ bool generatePack(const std::string& destFile,
     }
     std::ofstream dst(destFile, std::ios::binary);
     if (!dst) {
+#ifdef _WIN32
         char error_str[1000];
         strerror_s(error_str, sizeof error_str, errno);
+#endif /* _WIN32 */
+#ifdef _GTK
+        char *error_str = strerror(errno);
+#endif /* _GTK */
         _trace(std::string("Failed to output file: ") + error_str);
         return false;
     }
@@ -152,7 +158,7 @@ void parsePack(std::istream& res,
     path relativePath(".");
     std::vector<uint32_t> folder_size;
 
-    for (int i = 0; i < sizeof MAGIC - 1; i++) {
+    for (size_t i = 0; i < sizeof(MAGIC) - 1; i++) {
         if (MAGIC[i] != res.get())
         {
             std::runtime_error e("Invalid resouce pack");
@@ -171,7 +177,7 @@ void parsePack(std::istream& res,
         try {
             relativePath /= u8path(name);
         }
-        catch (std::exception e) {
+        catch (std::exception &e) {
             delete[] name;
             throw e;
         }
@@ -276,7 +282,7 @@ bool extractPack(const path& resFile) noexcept(false)
             }
         );
     }
-    catch (std::exception) {
+    catch (std::exception&) {
         return false;
     }
     return true;

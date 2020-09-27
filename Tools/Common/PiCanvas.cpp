@@ -8,7 +8,7 @@
 
 #endif /* _GTK */
 #include "ImageMatrix.h"
-#include "Canvas.h"
+#include "PiCanvas.h"
 
 Canvas::color PiCanvas::getPixel(const pImageMatrix im, int x, int y) noexcept(false)
 {
@@ -100,6 +100,7 @@ void PiCanvas::drawLine(pImageMatrix im, int x1, int y1, int x2, int y2, LineSty
                         x2 = 0; y2 = yLeft;
                     }
                     else /*if (on_right)*/ {
+                        (void)on_right;
                         x2 = w - 1; y2 = yRight;
                     }
                 }

@@ -5,6 +5,6 @@ SRCS := Window.cpp GdiCanvas.cpp ImageMatrix.cpp
 LIBS := -ljpeg -lpng `pkg-config --libs gtk+-3.0`
 
 ALL:
-	g++ ${FLAGS} ${LIBS} ${SRCS}
+	g++ ${FLAGS} ${SRCS} ${LIBS}
 clean:
 	rm -f out

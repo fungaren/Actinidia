@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2020, FANG All rights reserved.
+ */
 #pragma once
 #include <optional>
 #include <fstream>

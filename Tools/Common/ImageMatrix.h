@@ -17,6 +17,7 @@
     #include "jpeglib.h"
 #endif /* _GTK */
 #include <cstdint>
+#include <cstring>
 #include <codecvt>
 #include <locale>
 #include <stdexcept>

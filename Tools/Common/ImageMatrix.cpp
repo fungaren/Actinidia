@@ -25,15 +25,15 @@ pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t heig
     if (width == 0 || height == 0)
         throw std::invalid_argument("width and height cannot be zero");
 
-    // allocate memory space for image matrix
+    // Allocate memory space for image matrix
     uint32_t *table;
     try {
         table = new uint32_t[(size_t)width * height];
     }
-    catch (std::bad_alloc e) {
+    catch (std::bad_alloc &e) {
         throw std::runtime_error("Cannot allocate memory");
     }
-    for (size_t i = 0; i < width * height; i++)
+    for (size_t i = 0; i < (size_t)width * height; i++)
         table[i] = bkgrdColor;
     return std::shared_ptr<ImageMatrix>(new ImageMatrix(table, width, height));
 }
@@ -46,7 +46,7 @@ pImageMatrix ImageMatrixFactory::fromPngFile(const char* pngFile)
         fclose(fp);
         return im;
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         fclose(fp);
         throw e;
     }
@@ -60,7 +60,7 @@ pImageMatrix ImageMatrixFactory::fromPngFile(const wchar_t* pngFile)
         fclose(fp);
         return im;
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         fclose(fp);
         throw e;
     }
@@ -142,7 +142,7 @@ pImageMatrix ImageMatrixFactory::fromPngResource(UINT nResID, LPCTSTR lpType, HM
         FreeResource(hImgData);
         return im;
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         UnlockResource(hImgData);
         FreeResource(hImgData);
         throw e;
@@ -182,7 +182,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     try {
         table = new uint32_t[(size_t)w*h];
     }
-    catch (std::bad_alloc e) {
+    catch (std::bad_alloc &e) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
         throw std::runtime_error("Cannot allocate memory");
     }
@@ -232,7 +232,7 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const char* filePath
         dumpPngFile(im, fp);
         fclose(fp);
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         fclose(fp);
         throw e;
     }
@@ -245,7 +245,7 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const wchar_t* fileP
         dumpPngFile(im, fp);
         fclose(fp);
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         fclose(fp);
         throw e;
     }
@@ -368,7 +368,7 @@ pImageMatrix ImageMatrixFactory::fromJpegFile(const char* jpegFile)
         fclose(fp);
         return im;
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         fclose(fp);
         throw e;
     }
@@ -383,7 +383,7 @@ pImageMatrix ImageMatrixFactory::fromJpegFile(const wchar_t* jpegFile)
         fclose(fp);
         return im;
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         fclose(fp);
         throw e;
     }
@@ -481,7 +481,7 @@ pImageMatrix ImageMatrixFactory::fromJpegResource(UINT nResID, LPCTSTR lpType, H
         FreeResource(hImgData);
         return im;
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         UnlockResource(hImgData);
         FreeResource(hImgData);
         throw e;
@@ -540,7 +540,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     try {
         table = new uint32_t[(size_t)w*h];
     }
-    catch (std::bad_alloc e) {
+    catch (std::bad_alloc &e) {
         jpeg_destroy_decompress(&cinfo);
         throw std::runtime_error("Cannot allocate memory");
     }
@@ -601,7 +601,7 @@ void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const char* filePat
         dumpJpegFile(im, fp, quality);
         fclose(fp);
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         fclose(fp);
         throw e;
     }
@@ -616,7 +616,7 @@ void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const wchar_t* file
         dumpJpegFile(im, fp, quality);
         fclose(fp);
     }
-    catch (std::runtime_error e) {
+    catch (std::runtime_error &e) {
         fclose(fp);
         throw e;
     }

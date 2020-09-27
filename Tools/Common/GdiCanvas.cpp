@@ -10,7 +10,7 @@
 #endif /* _GTK */
 #include <fstream>
 #include "ImageMatrix.h"
-#include "Canvas.h"
+#include "GdiCanvas.h"
 
 #ifdef _WIN32
 void GdiCanvas::fillSolidRect(int left, int top, int right, int bottom, color fillColor) const

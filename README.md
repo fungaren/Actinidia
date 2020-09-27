@@ -38,6 +38,12 @@ Visual Studio 2019 is required.
 
 ### Linux 
 
+g++-8 is required to support C++17 filesystem:
+
+```bash
+sudo apt-get install g++-8
+```
+
 Install dependent libraries:
 
 ```bash

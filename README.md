@@ -47,7 +47,7 @@ sudo apt-get install g++-8
 Install dependent libraries:
 
 ```bash
-sudo apt-get install -y libgtk-3-dev zlib1g-dev libpng-dev libjpeg-dev
+sudo apt-get install -y libgtk-3-dev zlib1g-dev libpng-dev libjpeg-dev liblua5.3-dev
 ```
 
 Clone this repository and build:

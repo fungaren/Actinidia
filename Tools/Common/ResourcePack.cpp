@@ -6,7 +6,7 @@
     #undef max
 #endif /* _WIN32 */
 #ifdef _GTK
-    #define _ASSERT(...) 
+
 #endif /* _GTK */
 #include <string>
 #include <cstring>

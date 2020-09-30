@@ -20,15 +20,12 @@
     #endif
 #endif /* _WIN32 */
 #ifdef _GTK
-    
+    #include <gtk/gtk.h>
 #endif
 #include <string>
 #include <sstream>
 #include <filesystem>
 #include <map>
-
-extern const int MIN_WIDTH = 200;
-extern const int MIN_HEIGHT = 100;
 
 #include "../Tools/Common/Window.h"
 #include "../Tools/Common/ResourcePack.h"
@@ -53,7 +50,12 @@ void OnMouseWheel(uint32_t, short zDelta, int x, int y);
 bool bDirectMode;
 pResourcePack pack;
 // user data
+#ifdef _WIN32
 std::wstring user_data_path;
+#endif /* _WIN32 */
+#ifdef _GTK
+std::string user_data_path;
+#endif /* _GTK */
 std::map<const std::string, std::string> user_data;
 // save reference to ImageMatrix handles
 std::map<size_t, pImageMatrix> im_handles;
@@ -61,8 +63,11 @@ std::map<size_t, pImageMatrix> im_handles;
 Window w;
 size_t window_width = 1024;
 size_t window_height = 768;
+const int MIN_WIDTH = 200;
+const int MIN_HEIGHT = 100;
 Timer* timer;
 
+#ifdef _WIN32
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR    lpCmdLine,
@@ -70,7 +75,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     // resource file or resource folder
-    std::wstring game_res = L"game.res";
+    std::wstring game_res = "game.res";
+#endif /* _WIN32 */
+#ifdef _GTK
+int main(int argc, char** argv)
+{
+    char *lpCmdLine = argv[1];
+    // resource file or resource folder
+    std::string game_res = "game.res";
+#endif /* _GTK */
     if (*lpCmdLine == '\0')
     {
         try {
@@ -78,12 +91,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             pack = ResourcePack::parsePack(game_res);
             bDirectMode = false;
         }
-        catch (std::runtime_error e) {
+        catch (std::runtime_error& e) {
             // no default resource file found, try direct mode
             if (std::filesystem::exists("game") && std::filesystem::is_directory("game"))
                 bDirectMode = true;
             else {
-                MessageBox(NULL, L"Failed to load default resource file \"game.res\"", L"Error", MB_ICONERROR);
+                w.alert("Failed to load default resource file \"game.res\"", "Error", Window::ERROR);
                 return 1;
             }
         }
@@ -102,24 +115,32 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                 bDirectMode = false;
                 game_res = path.filename();
             }
-            catch (std::runtime_error e) {
-                MessageBox(NULL, L"Failed to load the resource file", L"Error", MB_ICONERROR);
+            catch (std::runtime_error& e) {
+                w.alert("Failed to load the resource file", "Error", Window::ERROR);
                 return 1;
             }
         }
         else {
-            MessageBox(NULL, L"Invalid resource file", L"Error", MB_ICONERROR);
+            w.alert("Invalid resource file", "Error", Window::ERROR);
             return 1;
         }
     }
 
+#ifdef _WIN32
     // load user data
-    if (bDirectMode) {
+    if (bDirectMode)
         user_data_path = L"game.data";
-    }
-    else {
-        user_data_path = game_res + L".data";
-    }
+    else
+        user_data_path = L".data";
+#endif /* _WIN32 */
+#ifdef _GTK
+    // load user data
+    if (bDirectMode)
+        user_data_path = "game.data";
+    else
+        user_data_path = ".data";
+#endif /* _GTK */
+
     std::ifstream in(user_data_path);
     char buff[1024];
     if (in.good()) {
@@ -134,8 +155,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
     in.close();
 
-    // set callbacks
-    
+    // set callbackss
     w.setLButtonDownHandler(OnLButtonDown);
     w.setLButtonUpHandler(OnLButtonUp);
     w.setPaintHandler(OnPaint);
@@ -143,23 +163,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     w.setKeyUpHandler(OnKeyUp);
     w.setMouseMoveHandler(OnMouseMove);
     w.setMouseWheelHandler(OnMouseWheel);
-    w.setElseHandler([](uint32_t message, WPARAM, LPARAM lParam) {
-        switch (message) {
-        case WM_GETMINMAXINFO:
-            MINMAXINFO* lpMMI;  // Minimum size
-            lpMMI = (MINMAXINFO*)lParam;
-            lpMMI->ptMinTrackSize.x = MIN_WIDTH;
-            lpMMI->ptMinTrackSize.y = MIN_HEIGHT;
-            return true;
-        case WM_SETFOCUS:
-            OnSetFocus();
-            return true;
-        case WM_KILLFOCUS:
-            OnKillFocus();
-            return true;
-        }
-        return false;
-    });
+    w.setGetFocusHandler(OnSetFocus);
+    w.setLoseFocusHandler(OnKillFocus);
     w.setExitCallback([]() {
         timer->end();
         OnClose();
@@ -178,11 +183,29 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Initialize Lua environment and run script
     if (LuaInit())
     {
+#ifdef _WIN32
         RECT rc = { 0, 0, (LONG)window_width, (LONG)window_height };
         AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
         // To create a window with specified size of client area.
-        w.create(game_res, (uint16_t)(rc.right - rc.left), (uint16_t)(rc.bottom - rc.top), NULL,
-            LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP)));
+        w.create(
+            game_res, // title
+            (uint16_t)(rc.right - rc.left), // width
+            (uint16_t)(rc.bottom - rc.top), // height
+            MIN_WIDTH, // min width
+            MIN_HEIGHT, // min height
+            NULL,
+            LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP))
+        );
+#endif /* _WIN32 */
+#ifdef _GTK
+        w.create(
+            game_res,
+            window_width,
+            window_height,
+            MIN_WIDTH, // min width
+            MIN_HEIGHT  // min height
+        );
+#endif /* _GTK */
         timer = new Timer();
         timer->begin(std::chrono::milliseconds(17), [] {
             w.refresh();

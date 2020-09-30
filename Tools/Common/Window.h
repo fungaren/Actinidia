@@ -20,10 +20,19 @@
  */
 class Window
 {
+#ifdef _WIN32
+    typedef std::wstring string_t;
+#endif /* _WIN32 */
+#ifdef _GTK
+    typedef std::string string_t;
+#endif /* _GTK */
+
     std::thread tWnd;
-    std::wstring title;
+    string_t title;
     mutable uint16_t width;
     mutable uint16_t height;
+    uint16_t min_w;
+    uint16_t min_h;
 
 #ifdef _WIN32
     HWND hWnd;
@@ -44,6 +53,8 @@ class Window
     std::function<void(uint32_t, int, int)> onMouseMove = [](uint32_t, int, int) {};
     std::function<void(uint32_t, short, int, int)> onMouseWheel = [](uint32_t, short, int, int) {};
     std::function<void(const GdiCanvas&)> onPaint = [](const GdiCanvas&) {};
+    std::function<void()> onGetFocus = [] {};
+    std::function<void()> onLoseFocus = [] {};
     std::function<bool()> onExit = [] { return true; };
 #ifdef _WIN32
     std::function<bool(uint32_t, WPARAM, LPARAM)> onElse = [](uint32_t, WPARAM, LPARAM) { return false; };
@@ -66,13 +77,15 @@ public:
 #ifdef _WIN32
     wchar_t **argv;
     Window():
-        width(0), height(0), hWnd(NULL), argc(0), argv(nullptr)
+        width(0), height(0), min_w(0), min_h(0),
+        hWnd(NULL), argc(0), argv(nullptr)
         {}
 #endif /* _WIN32 */
 #ifdef _GTK
     char **argv;
     Window():
-        width(0), height(0), app(nullptr), wnd(nullptr), argc(0), argv(nullptr)
+        width(0), height(0), min_w(0), min_h(0),
+        app(nullptr), wnd(nullptr), argc(0), argv(nullptr)
         {}
 #endif /* _GTK */
 
@@ -90,15 +103,18 @@ public:
      * If parent window is not set (default), windows messages will be taken over.
      * Otherwise, you must call dispacher(...) manually in the parent WndProc.
      */
-    void create(const std::wstring& title,
+    void create(const string_t& title,
          uint16_t width = 600, uint16_t height = 400,
+         uint16_t min_width = 30, uint16_t min_height = 30,
          HWND parent=NULL, HICON icon=NULL)
     {
         if (title.empty())
             return;
         this->title = title;
-        this->width = width;
+        this->width = width;s
         this->height = height;
+        this->min_w = min_width;
+        this->min_h = min_height;
         tWnd = std::thread(&Window::looper, this, parent, icon);
     }
     static LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -106,14 +122,17 @@ public:
     HWND getHWND() { return hWnd; }
 #endif /* _WIN32 */
 #ifdef _GTK
-    void create(const std::wstring& title,
-         uint16_t width = 600, uint16_t height = 400)
+    void create(const string_t& title,
+         uint16_t width = 600, uint16_t height = 400,
+         uint16_t min_width = 30, uint16_t min_height = 30)
     {
         if (title.empty())
             return;
         this->title = title;
         this->width = width;
         this->height = height;
+        this->min_w = min_width;
+        this->min_h = min_height;
         tWnd = std::thread(&Window::looper, this);
     }
 #endif /* _GTK */
@@ -150,9 +169,9 @@ public:
      */
     void alert(const char* str, 
                const char* title, MessageType type = INFO);
-    void alert(const std::wstring& str,
-               const std::wstring& title, MessageType type = INFO);
-    void setTitle(const std::wstring& str);
+    void alert(const string_t& str,
+               const string_t& title, MessageType type = INFO);
+    void setTitle(const string_t& str);
 
     /**
      * @return The position (left, top) of the window.
@@ -163,17 +182,6 @@ public:
      * created yet, default windows size is returned.
      */
     std::pair<int, int> getSize() const;
-
-    /**
-     * @param str A wide-char string.
-     * @return A UTF-8 encoded C-type string.
-     */
-    static const char* utf8(const std::wstring& str) {
-        static std::string s; // for temporary use
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> cvt;
-        s = cvt.to_bytes(str);
-        return s.c_str();
-    }
 
     /**
      * @param int key: The virtual-key code of the key when the ALT key is not pressed.
@@ -248,6 +256,10 @@ public:
      */
     template <typename T>
     void setPaintHandler(T&& handler)       { isRunning(); onPaint = handler; }
+    template <typename T>
+    void setGetFocusHandler(T&& handler)    { isRunning(); onGetFocus = handler; }
+    template <typename T>
+    void setLoseFocusHandler(T&& handler)   { isRunning(); onLoseFocus = handler; }
     /**
      * @return false if you want to cancel the close.
      */
@@ -262,6 +274,7 @@ public:
     void setElseHandler(T&& handler)        { isRunning(); onElse = handler; }
 #endif /* _WIN32 */
 #ifdef _GTK
+    
 #endif /* _GTK */
     auto& getKeyDownHandler() const         { return onKeyDown; }
     auto& getKeyUpHandler() const           { return onKeyUp; }
@@ -272,6 +285,8 @@ public:
     auto& getMouseMoveHandler() const       { return onMouseMove; }
     auto& getMouseWheelHandler() const      { return onMouseWheel; }
     auto& getPaintHandler() const           { return onPaint; }
+    auto& getGetFocusHandler() const        { return onGetFocus; }
+    auto& getLoseFocusHandler() const       { return onLoseFocus; }
     auto& getExitCallback() const           { return onExit; }
 #ifdef _WIN32
     auto& getElseHandler() const            { return onElse; }

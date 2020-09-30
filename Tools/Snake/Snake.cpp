@@ -32,7 +32,7 @@ SnakeView::SnakeView(HINSTANCE i, HWND parent) :
     w.setKeyDownHandler([this](int key) {
         this->OnKeyDown(key);
     });
-    w.create(L"Snake", 600, 400, parent);
+    w.create(L"Snake", 600, 400, 600, 400, parent);
 
     GameState = State::Welcome;
 }

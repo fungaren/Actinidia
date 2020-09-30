@@ -64,6 +64,18 @@ LRESULT CALLBACK Window::dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARA
         EndPaint(hWnd, &ps);
     }
     break;
+    case WM_SETFOCUS:
+        callbackSource[hWnd]->getGetFocusHandler()();
+        break;
+    case WM_KILLFOCUS:
+        callbackSource[hWnd]->getLoseFocusHandler()();
+        break;
+    case WM_GETMINMAXINFO:
+        MINMAXINFO* lpMMI;  // Minimum size
+        lpMMI = (MINMAXINFO*)lParam;
+        lpMMI->ptMinTrackSize.x = min_w;
+        lpMMI->ptMinTrackSize.y = min_h;
+        break;
     case WM_CLOSE:
         if (callbackSource[hWnd]->getExitCallback()())
             return DefWindowProc(hWnd, message, wParam, lParam);
@@ -81,7 +93,7 @@ LRESULT CALLBACK Window::dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARA
 void Window::looper(HWND parent, HICON icon)
 {
     HINSTANCE hInstance = GetModuleHandle(NULL);
-    std::wstring wndClassName = title + L"cls";
+    string_t wndClassName = title + L"cls";
     WNDCLASSEXW wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -125,12 +137,12 @@ void Window::alert(const char* str, const char* title, MessageType type)
     MessageBoxA(hWnd, str, title, type | MB_OK);
 }
 
-void Window::alert(const std::wstring& str, const std::wstring& title, MessageType type)
+void Window::alert(const string_t& str, const string_t& title, MessageType type)
 {
     MessageBoxW(hWnd, str.c_str(), title.c_str(), type | MB_OK);
 }
 
-void Window::setTitle(const std::wstring& str)
+void Window::setTitle(const string_t& str)
 {
     SetWindowText(hWnd, str.c_str());
 }
@@ -283,7 +295,17 @@ gboolean paint(GtkWidget *widget, cairo_t *cr, gpointer user_data)
     Window *w = (Window *)user_data;
     GdiCanvas gdi(GTK_WINDOW(w->wnd), cr);
     w->getPaintHandler()(gdi);
-    return FALSE;
+    return TRUE;
+}
+
+gboolean focus(GtkWindow *window, GtkWidget *widget, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    if (widget == NULL)
+        w->getLoseFocusHandler()();
+    else
+        w->getGetFocusHandler()();
+    return TRUE;
 }
 
 gboolean onclose(GtkWidget *widget, GdkEvent *event, gpointer user_data)
@@ -299,7 +321,7 @@ void activate(GtkApplication* app, gpointer user_data)
     int width, height;
     std::tie(width, height) = w->getSize();
     gtk_window_set_default_size(GTK_WINDOW(w->wnd), width, height);
-    gtk_window_set_title(GTK_WINDOW(w->wnd), w->utf8(w->title));
+    gtk_window_set_title(GTK_WINDOW(w->wnd), w->title.c_str());
     gtk_window_set_position(GTK_WINDOW(w->wnd), GTK_WIN_POS_CENTER);
 
     /* draw area */
@@ -320,8 +342,9 @@ void activate(GtkApplication* app, gpointer user_data)
     g_signal_connect(draw_area, "button-release-event", G_CALLBACK(btnup), w);
     g_signal_connect(draw_area, "motion-notify-event", G_CALLBACK(mousemove), w);
     g_signal_connect(draw_area, "scroll-event", G_CALLBACK(mousewheel), w);
-    g_signal_connect(draw_area, "delete-event", G_CALLBACK(onclose), w);
     g_signal_connect(draw_area, "draw", G_CALLBACK(paint), w);
+    g_signal_connect(draw_area, "set-focus", G_CALLBACK(focus), w);
+    g_signal_connect(draw_area, "delete-event", G_CALLBACK(onclose), w);
 
     gtk_widget_show_all(w->wnd);
 }
@@ -357,14 +380,14 @@ void Window::alert(const char* str, const char* title, MessageType type)
     gtk_widget_destroy(dialog);
 }
 
-void Window::alert(const std::wstring& str, const std::wstring& title, MessageType type)
+void Window::alert(const string_t& str, const string_t& title, MessageType type)
 {
-    alert(utf8(str), utf8(title), type);
+    alert(str.c_str(), title.c_str(), type);
 }
 
-void Window::setTitle(const std::wstring& str)
+void Window::setTitle(const string_t& str)
 {
-    gtk_window_set_title(GTK_WINDOW(wnd), utf8(str));
+    gtk_window_set_title(GTK_WINDOW(wnd), str.c_str());
 }
 
 std::pair<int, int> Window::getPos() const
@@ -442,7 +465,7 @@ int main(int argc, char* argv[])
                 );
         }
     });
-    w.create(L"demo");
+    w.create("demo");
     return 0;
 }
 #endif /* UNIT_TEST */

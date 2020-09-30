@@ -8,6 +8,9 @@
 #include <queue>
 #include <list>
 #include <functional>
+#ifndef _ASSERT
+    #define _ASSERT(...)
+#endif /* _ASSERT */
 
 /*
     resource package format:

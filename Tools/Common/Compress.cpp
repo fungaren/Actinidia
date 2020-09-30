@@ -7,13 +7,16 @@
     #include "../zlib/zlib.h"
 #endif /* _WIN32 */
 #ifdef _GTK
-    #define _ASSERT(...) 
     #include "zlib.h"
 #endif /* _GTK */
 #include <string>
 #include <fstream>
 #include <filesystem>
 #include "Compress.h"
+
+#ifndef _ASSERT
+    #define _ASSERT(...)
+#endif /* _ASSERT */
 
 std::string zerr(int code)
 {

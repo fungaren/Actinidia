@@ -76,6 +76,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     // resource file or resource folder
     std::wstring game_res = "game.res";
+    if (*lpCmdLine == '\0')
 #endif /* _WIN32 */
 #ifdef _GTK
 int main(int argc, char** argv)
@@ -83,11 +84,11 @@ int main(int argc, char** argv)
     char *lpCmdLine = argv[1];
     // resource file or resource folder
     std::string game_res = "game.res";
+    if (argc == 1)
 #endif /* _GTK */
-    if (*lpCmdLine == '\0')
     {
+        // no resource file specified, use default
         try {
-            // no resource file specified, use default
             pack = ResourcePack::parsePack(game_res);
             bDirectMode = false;
         }
@@ -207,9 +208,9 @@ int main(int argc, char** argv)
         );
 #endif /* _GTK */
         timer = new Timer();
-        timer->begin(std::chrono::milliseconds(17), [] {
+        timer->begin(17ms, [] {
             w.refresh();
-        });
+        }, 1000ms);
     }
     return 0;
 }

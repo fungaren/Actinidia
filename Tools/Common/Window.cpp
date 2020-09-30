@@ -318,13 +318,31 @@ void activate(GtkApplication* app, gpointer user_data)
 {
     Window *w = (Window *)user_data;
     w->wnd = gtk_application_window_new(app);
-    int width, height;
-    std::tie(width, height) = w->getSize();
-    gtk_window_set_default_size(GTK_WINDOW(w->wnd), width, height);
+    // set window size and min max size
+    gtk_window_set_default_size(GTK_WINDOW(w->wnd), w->width, w->height);
+    GdkGeometry size_hints = {
+        .min_width = w->min_w,
+        .min_height = w->min_h,
+        .max_width = w->width,
+        .max_height = w->height,
+        .base_width = 0,
+        .base_height = 0,
+        .width_inc = 0,
+        .height_inc = 0,
+        .min_aspect = 0.0,
+        .max_aspect = 0.0,
+        .win_gravity = GDK_GRAVITY_NORTH_WEST
+    };
+    gtk_window_set_geometry_hints(
+        GTK_WINDOW(w->wnd), NULL, &size_hints,
+        (GdkWindowHints)(GDK_HINT_MIN_SIZE | GDK_HINT_MAX_SIZE)
+        );
+    // set window title and position
     gtk_window_set_title(GTK_WINDOW(w->wnd), w->title.c_str());
     gtk_window_set_position(GTK_WINDOW(w->wnd), GTK_WIN_POS_CENTER);
+    g_signal_connect(w->wnd, "set-focus", G_CALLBACK(focus), w);
 
-    /* draw area */
+    // draw area events
     GtkWidget *draw_area = gtk_drawing_area_new();
     gtk_container_add(GTK_CONTAINER(w->wnd), draw_area);
     gtk_widget_add_events(draw_area,
@@ -343,7 +361,6 @@ void activate(GtkApplication* app, gpointer user_data)
     g_signal_connect(draw_area, "motion-notify-event", G_CALLBACK(mousemove), w);
     g_signal_connect(draw_area, "scroll-event", G_CALLBACK(mousewheel), w);
     g_signal_connect(draw_area, "draw", G_CALLBACK(paint), w);
-    g_signal_connect(draw_area, "set-focus", G_CALLBACK(focus), w);
     g_signal_connect(draw_area, "delete-event", G_CALLBACK(onclose), w);
 
     gtk_widget_show_all(w->wnd);
@@ -369,6 +386,12 @@ void Window::alert(const char* str, const char* title, MessageType type)
     /*
      * The message box icon may not display, don't know why.
      */
+    if (app == nullptr)
+    {
+        // not initialized yet, just print the message
+        fprintf(stderr, "%s: %s\n", title, str);
+        return;
+    }
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(wnd),
         GTK_DIALOG_MODAL,
@@ -400,7 +423,7 @@ std::pair<int, int> Window::getPos() const
 std::pair<int, int> Window::getSize() const
 {
     int w, h;
-    if (wnd != nullptr)
+    if (wnd)
     {
         gtk_window_get_size(GTK_WINDOW(wnd), &w, &h);
         if (w > 0 && w < UINT16_MAX && h > 0 && h < UINT16_MAX)

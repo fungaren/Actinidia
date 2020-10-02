@@ -14,7 +14,7 @@
 #endif /* _WIN32 */
 #ifdef _GTK
     #include <gtk/gtk.h>
-    #include "lua5.3/lua.hpp"
+    #include <lua5.3/lua.hpp>
 #endif /* _GTK */
 
 #include <string>

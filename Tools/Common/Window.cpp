@@ -341,6 +341,7 @@ void activate(GtkApplication* app, gpointer user_data)
     gtk_window_set_title(GTK_WINDOW(w->wnd), w->title.c_str());
     gtk_window_set_position(GTK_WINDOW(w->wnd), GTK_WIN_POS_CENTER);
     g_signal_connect(w->wnd, "set-focus", G_CALLBACK(focus), w);
+    g_signal_connect(w->wnd, "delete-event", G_CALLBACK(onclose), w);
 
     // draw area events
     GtkWidget *draw_area = gtk_drawing_area_new();
@@ -361,7 +362,6 @@ void activate(GtkApplication* app, gpointer user_data)
     g_signal_connect(draw_area, "motion-notify-event", G_CALLBACK(mousemove), w);
     g_signal_connect(draw_area, "scroll-event", G_CALLBACK(mousewheel), w);
     g_signal_connect(draw_area, "draw", G_CALLBACK(paint), w);
-    g_signal_connect(draw_area, "delete-event", G_CALLBACK(onclose), w);
 
     gtk_widget_show_all(w->wnd);
 }

@@ -111,7 +111,7 @@ public:
         if (title.empty())
             return;
         this->title = title;
-        this->width = width;s
+        this->width = width;
         this->height = height;
         this->min_w = min_width;
         this->min_h = min_height;

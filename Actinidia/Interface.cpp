@@ -149,7 +149,7 @@ int GetText(lua_State *L)
         std::ifstream in("./game/" + f, std::ios::binary);
         if (in.good()) {
             in.seekg(0, std::ios::end);
-            size = in.tellg();
+            size = (uint32_t)in.tellg();
             buffer = new char[size];
             in.seekg(0, std::ios::beg);
             in.read(buffer, size);
@@ -456,12 +456,13 @@ int Screenshot(lua_State *L)
     static int n_png = 0;
     std::filesystem::create_directory("screenshot");
     std::time_t now = std::time(nullptr);
-    auto&& time = std::put_time(std::localtime(&now), "%Y-%m-%d-%H-%M-%S");
 
 #ifdef _WIN32
-    std::wstringstram ss;
-    ss << "screenshot\\" << time << '_' << n_png++;
-
+    struct tm t;
+    localtime_s(&t, &now);
+    auto&& time = std::put_time(&t, L"%Y-%m-%d-%H-%M-%S");
+    std::wstringstream ss;
+    ss << L"screenshot\\" << time << L'_' << n_png++;
     HDC tdc = GetDC(w.getHWND());
     HDC hdc = CreateCompatibleDC(NULL);
     auto size = w.getSize();
@@ -492,10 +493,14 @@ int Screenshot(lua_State *L)
     // DUMP TO FILE
     pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, bmpObj.bmWidth, bmpObj.bmHeight);
     im->discardAlphaChannel();
-    ImageMatrixFactory::dumpPngFile(im, ss.str());
+    ImageMatrixFactory::dumpPngFile(im, ss.str().c_str());
     delete[] tmp;
 #endif /* _WIN32 */
 #ifdef _GTK
+    auto&& time = std::put_time(std::localtime(&now), "%Y-%m-%d-%H-%M-%S");
+    std::stringstream ss;
+    ss << "screenshot\\" << time << '_' << n_png++;
+    (void)ss;
     (void)time;
     (void)n_png;
 #endif /* _GTK */

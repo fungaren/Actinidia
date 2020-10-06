@@ -73,8 +73,8 @@ LRESULT CALLBACK Window::dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARA
     case WM_GETMINMAXINFO:
         MINMAXINFO* lpMMI;  // Minimum size
         lpMMI = (MINMAXINFO*)lParam;
-        lpMMI->ptMinTrackSize.x = min_w;
-        lpMMI->ptMinTrackSize.y = min_h;
+        lpMMI->ptMinTrackSize.x = callbackSource[hWnd]->min_w;
+        lpMMI->ptMinTrackSize.y = callbackSource[hWnd]->min_h;
         break;
     case WM_CLOSE:
         if (callbackSource[hWnd]->getExitCallback()())

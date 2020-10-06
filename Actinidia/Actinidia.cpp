@@ -75,7 +75,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     // resource file or resource folder
-    std::wstring game_res = "game.res";
+    std::wstring game_res = L"game.res";
     if (*lpCmdLine == '\0')
 #endif /* _WIN32 */
 #ifdef _GTK

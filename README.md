@@ -41,7 +41,7 @@ Visual Studio 2019 is required.
 g++-8 is required to support C++17 filesystem:
 
 ```bash
-sudo apt-get install g++-8
+sudo apt-get install g++-8 cmake
 ```
 
 Install dependent libraries:
@@ -54,6 +54,7 @@ Clone this repository and build:
 
 ```bash
 git clone https://github.com/mooction/actinidia
-cd actinidia
+cd actinidia/Actinidia
+cmake .
 make
 ```

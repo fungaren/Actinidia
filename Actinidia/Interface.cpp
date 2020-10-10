@@ -14,6 +14,7 @@
 #ifdef _GTK
     #include <gtk/gtk.h>
     #include <lua5.3/lua.hpp>
+    #include <iostream>
 #endif /* _GTK */
 
 #include <string>
@@ -485,49 +486,23 @@ int Screenshot(lua_State *L)
     localtime_s(&t, &now);
     auto&& time = std::put_time(&t, L"%Y-%m-%d-%H-%M-%S");
     std::wstringstream ss;
-    ss << L"screenshot\\" << time << L'_' << n_png++;
-    HDC tdc = GetDC(w.getHWND());
-    HDC hdc = CreateCompatibleDC(NULL);
-    auto size = w.getSize();
-    HBITMAP hbmp = CreateCompatibleBitmap(tdc, size.first, size.second);
-    HBITMAP hobmp = (HBITMAP)SelectObject(hdc, hbmp);
-    // DO COPY
-    BitBlt(hdc, 0, 0, size.first, size.second, tdc, 0, 0, SRCCOPY);
-    ReleaseDC(w.getHWND(), tdc);
-
-    BITMAP bmpObj;
-    GetObject(hbmp, sizeof(BITMAP), &bmpObj);
-    BITMAPINFOHEADER bmpHead;
-    bmpHead.biBitCount = (WORD)(GetDeviceCaps(hdc, BITSPIXEL) * GetDeviceCaps(hdc, PLANES));
-    bmpHead.biCompression = BI_RGB;
-    bmpHead.biPlanes = 1;
-    bmpHead.biHeight = -bmpObj.bmHeight;
-    bmpHead.biWidth = bmpObj.bmWidth;
-    bmpHead.biSize = sizeof BITMAPINFOHEADER;
-    // READ PIXEL DATA
-    uint32_t* tmp = new uint32_t[bmpObj.bmWidth*bmpObj.bmHeight];
-    GetDIBits(hdc, hbmp, 0, bmpObj.bmHeight, tmp, (LPBITMAPINFO)&bmpHead, DIB_RGB_COLORS);
-
-    SelectObject(hdc, hobmp);
-    DeleteObject(hbmp);
-    DeleteObject(hobmp);
-    DeleteDC(hdc);
-
-    // DUMP TO FILE
-    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, bmpObj.bmWidth, bmpObj.bmHeight);
-    im->discardAlphaChannel();
-    ImageMatrixFactory::dumpPngFile(im, ss.str().c_str());
-    delete[] tmp;
+    ss << L"screenshot\\" << time << L'_' << n_png++ << ".png";
 #endif /* _WIN32 */
 #ifdef _GTK
     auto&& time = std::put_time(std::localtime(&now), "%Y-%m-%d-%H-%M-%S");
     std::stringstream ss;
-    ss << "screenshot\\" << time << '_' << n_png++;
-    (void)ss;
-    (void)time;
-    (void)n_png;
+    ss << "screenshot/" << time << '_' << n_png++ << ".png";
+    std::cout << "screenshot saved: " << ss.str() << '\n'; 
 #endif /* _GTK */
-    lua_pushboolean(L, true);
+
+    pImageMatrix im = w.getWindowImage();
+    if (im)
+    {
+        ImageMatrixFactory::dumpPngFile(im, ss.str().c_str());
+        lua_pushboolean(L, true);
+    }
+    else
+        lua_pushboolean(L, false);
     return 1;
 }
 

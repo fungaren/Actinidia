@@ -170,7 +170,17 @@ public:
             : size(len), addr(pImageRes) {}
     };
 
-    static pImageMatrix fromPixelData(uint32_t* data, uint16_t width, uint16_t height) {
+    /**
+     * @param data Pixel data buffer. The memory will be freed automatically when
+     *             the ImageMatrix is destructed.
+     * @param width width of pixel data.
+     * @param height height of pixel data.
+     */
+    static pImageMatrix fromPixelData(
+        uint32_t* data, uint16_t width, uint16_t height) noexcept(false)
+    {
+        if (data == nullptr)
+            throw std::runtime_error("buffer pointer is null");
         return std::shared_ptr<ImageMatrix>(new ImageMatrix(data, width, height));
     }
 

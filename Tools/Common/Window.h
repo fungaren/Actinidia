@@ -118,8 +118,6 @@ public:
         tWnd = std::thread(&Window::looper, this, parent, icon);
     }
     static LRESULT CALLBACK dispacher(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-    // For some reason we need HWND
-    HWND getHWND() { return hWnd; }
 #endif /* _WIN32 */
 #ifdef _GTK
     void create(const string_t& title,
@@ -182,6 +180,12 @@ public:
      * created yet, default windows size is returned.
      */
     std::pair<int, int> getSize() const;
+
+    /**
+     * @return An ImageMatrix handle that contains the pixel data in the window.
+     * If any error occured, return nullptr.
+     */
+    pImageMatrix getWindowImage() const;
 
     /**
      * @param int key: The virtual-key code of the key when the ALT key is not pressed.

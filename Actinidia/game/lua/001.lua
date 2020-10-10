@@ -30,7 +30,9 @@ function current.OnClose()
 end
 
 function current.OnKeyDown(nChar)
-
+    if nChar == core.vk["VK_F4"] then
+        Screenshot();
+    end
 end
 
 function current.OnKeyUp(nChar)

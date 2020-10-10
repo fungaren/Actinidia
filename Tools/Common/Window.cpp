@@ -163,6 +163,49 @@ std::pair<int, int> Window::getSize() const
     return { width, height };
 }
 
+pImageMatrix Window::getWindowImage() const
+{
+    getSize();
+    HDC tdc = GetDC(hWnd);
+    HDC hdc = CreateCompatibleDC(NULL);
+    HBITMAP hbmp = CreateCompatibleBitmap(tdc, width, height);
+    HBITMAP hobmp = (HBITMAP)SelectObject(hdc, hbmp);
+    // do copy
+    BitBlt(hdc, 0, 0, width, height, tdc, 0, 0, SRCCOPY);
+    ReleaseDC(hWnd, tdc);
+
+    BITMAP bmpObj;
+    GetObject(hbmp, sizeof(BITMAP), &bmpObj);
+    BITMAPINFOHEADER bmpHead;
+    bmpHead.biBitCount = (WORD)(GetDeviceCaps(hdc, BITSPIXEL) * GetDeviceCaps(hdc, PLANES));
+    bmpHead.biCompression = BI_RGB;
+    bmpHead.biPlanes = 1;
+    bmpHead.biHeight = -bmpObj.bmHeight;
+    bmpHead.biWidth = bmpObj.bmWidth;
+    bmpHead.biSize = sizeof BITMAPINFOHEADER;
+    // read pixel data
+    uint32_t* tmp;
+    try {
+        tmp = new uint32_t[bmpObj.bmWidth*bmpObj.bmHeight];
+    } catch (std::bad_alloc& e) {
+        SelectObject(hdc, hobmp);
+        DeleteObject(hbmp);
+        DeleteObject(hobmp);
+        DeleteDC(hdc);
+        return nullptr;
+    }
+    GetDIBits(hdc, hbmp, 0, bmpObj.bmHeight, tmp, (LPBITMAPINFO)&bmpHead, DIB_RGB_COLORS);
+
+    SelectObject(hdc, hobmp);
+    DeleteObject(hbmp);
+    DeleteObject(hobmp);
+    DeleteDC(hdc);
+
+    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, bmpObj.bmWidth, bmpObj.bmHeight);
+    im->discardAlphaChannel();
+    return im;
+}
+
 #ifdef UNIT_TEST
 #if defined _M_IX86
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls'"\
@@ -192,17 +235,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 #endif /* _WIN32 */
 #ifdef _GTK
+
 gboolean keydown(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 {
     Window *w = (Window *)user_data;
-    w->getKeyDownHandler()(event->keyval);
+    w->getKeyDownHandler()(keycode_table[event->keyval]);
     return TRUE;
 }
 
 gboolean keyup(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 {
     Window *w = (Window *)user_data;
-    w->getKeyUpHandler()(event->keyval);
+    w->getKeyUpHandler()(keycode_table[event->keyval]);
     return TRUE;
 }
 
@@ -212,11 +256,11 @@ gboolean btndown(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
     uint32_t modifiers = 0;
     // GdkModifierType
     if (event->state & GDK_SHIFT_MASK)
-        modifiers |= KEY_Shift_L;
+        modifiers |= GDK_KEY_Shift_L;
     if (event->state & GDK_CONTROL_MASK)
-        modifiers |= KEY_Control_L;
+        modifiers |= GDK_KEY_Control_L;
     if (event->state & GDK_MOD1_MASK)
-        modifiers |= KEY_Alt_L;
+        modifiers |= GDK_KEY_Alt_L;
     if (event->button == GDK_BUTTON_PRIMARY)
         w->getLButtonDownHandler()(modifiers, event->x, event->y);
     else if (event->button == GDK_BUTTON_SECONDARY)
@@ -232,11 +276,11 @@ gboolean btnup(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
     uint32_t modifiers = 0;
     // GdkModifierType
     if (event->state & GDK_SHIFT_MASK)
-        modifiers |= KEY_Shift_L;
+        modifiers |= GDK_KEY_Shift_L;
     if (event->state & GDK_CONTROL_MASK)
-        modifiers |= KEY_Control_L;
+        modifiers |= GDK_KEY_Control_L;
     if (event->state & GDK_MOD1_MASK)
-        modifiers |= KEY_Alt_L;
+        modifiers |= GDK_KEY_Alt_L;
     if (event->button == GDK_BUTTON_PRIMARY)
         w->getLButtonUpHandler()(modifiers, event->x, event->y);
     else if (event->button == GDK_BUTTON_SECONDARY)
@@ -250,11 +294,11 @@ gboolean mousemove(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
     uint32_t modifiers = 0;
     // GdkModifierType
     if (event->state & GDK_SHIFT_MASK)
-        modifiers |= KEY_Shift_L;
+        modifiers |= GDK_KEY_Shift_L;
     if (event->state & GDK_CONTROL_MASK)
-        modifiers |= KEY_Control_L;
+        modifiers |= GDK_KEY_Control_L;
     if (event->state & GDK_MOD1_MASK)
-        modifiers |= KEY_Alt_L;
+        modifiers |= GDK_KEY_Alt_L;
     w->getMouseMoveHandler()(modifiers, event->x, event->y);
     return TRUE;
 }
@@ -265,11 +309,11 @@ gboolean mousewheel(GtkWidget *widget, GdkEventScroll *event, gpointer user_data
     uint32_t modifiers = 0;
     // GdkModifierType
     if (event->state & GDK_SHIFT_MASK)
-        modifiers |= KEY_Shift_L;
+        modifiers |= GDK_KEY_Shift_L;
     if (event->state & GDK_CONTROL_MASK)
-        modifiers |= KEY_Control_L;
+        modifiers |= GDK_KEY_Control_L;
     if (event->state & GDK_MOD1_MASK)
-        modifiers |= KEY_Alt_L;
+        modifiers |= GDK_KEY_Alt_L;
     if (event->direction == GDK_SCROLL_UP)
         w->getMouseWheelHandler()(modifiers,
             (short)event->delta_y, 
@@ -298,13 +342,17 @@ gboolean paint(GtkWidget *widget, cairo_t *cr, gpointer user_data)
     return TRUE;
 }
 
-gboolean focus(GtkWindow *window, GtkWidget *widget, gpointer user_data)
+gboolean setfocus(GtkWidget *widget, GdkEvent *event, gpointer user_data)
 {
     Window *w = (Window *)user_data;
-    if (widget == NULL)
-        w->getLoseFocusHandler()();
-    else
-        w->getGetFocusHandler()();
+    w->getGetFocusHandler()();
+    return TRUE;
+}
+
+gboolean losefocus(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+    Window *w = (Window *)user_data;
+    w->getLoseFocusHandler()();
     return TRUE;
 }
 
@@ -340,23 +388,21 @@ void activate(GtkApplication* app, gpointer user_data)
     // set window title and position
     gtk_window_set_title(GTK_WINDOW(w->wnd), w->title.c_str());
     gtk_window_set_position(GTK_WINDOW(w->wnd), GTK_WIN_POS_CENTER);
-    g_signal_connect(w->wnd, "set-focus", G_CALLBACK(focus), w);
+    g_signal_connect(w->wnd, "focus-in-event", G_CALLBACK(setfocus), w);
+    g_signal_connect(w->wnd, "focus-out-event", G_CALLBACK(losefocus), w);
     g_signal_connect(w->wnd, "delete-event", G_CALLBACK(onclose), w);
+    g_signal_connect(w->wnd, "key-press-event", G_CALLBACK(keydown), w);
+    g_signal_connect(w->wnd, "key-release-event", G_CALLBACK(keyup), w);
 
     // draw area events
     GtkWidget *draw_area = gtk_drawing_area_new();
     gtk_container_add(GTK_CONTAINER(w->wnd), draw_area);
     gtk_widget_add_events(draw_area,
         GDK_POINTER_MOTION_MASK |
-        GDK_BUTTON_PRESS_MASK | 
         GDK_BUTTON_MOTION_MASK |
         GDK_BUTTON_PRESS_MASK | 
         GDK_BUTTON_RELEASE_MASK | 
-        GDK_KEY_PRESS_MASK | 
-        GDK_KEY_RELEASE_MASK |
         GDK_SCROLL_MASK );
-    g_signal_connect(draw_area, "key-press-event", G_CALLBACK(keydown), w);
-    g_signal_connect(draw_area, "key-release-event", G_CALLBACK(keyup), w);
     g_signal_connect(draw_area, "button-press-event", G_CALLBACK(btndown), w);
     g_signal_connect(draw_area, "button-release-event", G_CALLBACK(btnup), w);
     g_signal_connect(draw_area, "motion-notify-event", G_CALLBACK(mousemove), w);
@@ -368,6 +414,7 @@ void activate(GtkApplication* app, gpointer user_data)
 
 void Window::looper()
 {
+    init_keycode_table();
     app = gtk_application_new("cc.moooc.window", G_APPLICATION_FLAGS_NONE);
     g_signal_connect(app, "activate", G_CALLBACK(activate), this);
     g_application_run(G_APPLICATION(app), 0, NULL);
@@ -433,6 +480,31 @@ std::pair<int, int> Window::getSize() const
         }
     }
     return { width, height };
+}
+
+pImageMatrix Window::getWindowImage() const
+{
+    if (!wnd)
+        return nullptr;
+    getSize();
+    GdkWindow *wnd_d = gtk_widget_get_window(wnd);
+    GdkPixbuf *pixbuf = gdk_pixbuf_get_from_window(wnd_d, 0, 0, width, height);
+    if (pixbuf == nullptr)
+        return nullptr;
+
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);  
+    cairo_t *cr = cairo_create(surface);
+    gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+    cairo_paint(cr);
+    cairo_surface_flush(surface);
+
+    uint32_t* data = (uint32_t*)cairo_image_surface_get_data(surface);
+    pImageMatrix im = ImageMatrixFactory::fromPixelData(data, width, height);
+    im->discardAlphaChannel();
+
+    cairo_destroy(cr);
+    // cairo_surface_destroy(surface);
+    return im;
 }
 
 #ifdef UNIT_TEST

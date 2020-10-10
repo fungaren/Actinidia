@@ -15,13 +15,13 @@
 #include "Compress.h"
 
 inline void _trace(std::wstring str) {
-#ifdef _DEBUG
+#if (defined _WIN32) && (defined _DEBUG)
     OutputDebugStringW((str + L'\n').c_str());
 #endif
 }
 
 inline void _trace(std::string str) {
-#ifdef _DEBUG
+#if (defined _WIN32) && (defined _DEBUG)
     OutputDebugStringA((str + '\n').c_str());
 #endif
 }

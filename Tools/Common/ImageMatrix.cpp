@@ -391,7 +391,7 @@ pImageMatrix ImageMatrixFactory::fromJpegFile(const wchar_t* jpegFile)
 
 inline void _trace(std::wstring str) {
 #if (defined _WIN32) && (defined _DEBUG)
-    OutputDebugString((str + L'\n').c_str());
+    OutputDebugStringW((str + L'\n').c_str());
 #endif
 }
 

@@ -8,7 +8,6 @@
 #include "Common/Window.h"
 #include "Common/Canvas.h"
 #include "Common/Timer.h"
-#include "Common/Keycodes.h"
 #include "Snake.h"
 
 SnakeView::SnakeView(HINSTANCE i, HWND parent) : 
@@ -598,8 +597,8 @@ void SnakeView::OnKeyDown(int key)
 {
     switch (key)
     {
-    case KEY_Return:
-    case KEY_Space:
+    case VK_RETURN:
+    case VK_SPACE:
         switch (GameState)
         {
         case State::GameOver:
@@ -630,7 +629,7 @@ void SnakeView::OnKeyDown(int key)
             break;
         }
         break;
-    case KEY_Up:
+    case VK_UP:
         if (Direction != TODOWN && Using == false)
         {
             // 往下走不能突然向上,被占用时也不能更改方向
@@ -638,7 +637,7 @@ void SnakeView::OnKeyDown(int key)
             Using = true;                       // 开始占用
         }
         break;
-    case KEY_Down:
+    case VK_DOWN:
         if (Direction != TOUP && Using == false)
         {
             // 往上走不能突然向下,被占用时也不能更改方向
@@ -646,7 +645,7 @@ void SnakeView::OnKeyDown(int key)
             Using = true;                       // 开始占用
         }
         break;
-    case KEY_Left:
+    case VK_LEFT:
         if (Direction != TORIGHT && Using == false)
         {
             // 往右走不能突然向左,被占用时也不能更改方向
@@ -654,7 +653,7 @@ void SnakeView::OnKeyDown(int key)
             Using = true;                       // 开始占用
         }
         break;
-    case KEY_Right:
+    case VK_RIGHT:
         if (Direction != TOLEFT && Using == false)
         {
             // 往左走不能突然向右,被占用时也不能更改方向

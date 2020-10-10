@@ -1,6 +1,8 @@
 # Actinidia
 
-Using Lua to write your games running on Windows10/Android. Only x64 system are supported.
+![logo](Actinidia/logo.png)
+
+Using Lua to write your games running on Windows10/Linux/Android.
 
 ## Parts
 
@@ -57,4 +59,11 @@ git clone https://github.com/mooction/actinidia
 cd actinidia/Actinidia
 cmake .
 make
+sudo make install
+```
+
+If you want to build a deb package, execute:
+
+```bash
+make package
 ```

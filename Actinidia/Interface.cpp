@@ -7,7 +7,6 @@
     #undef PlaySound
 
     #pragma comment(lib, "lua/lua.lib")
-    #include "bass/bass.h"
     #pragma comment(lib, "bass/bass.lib")
 
     #include "lua/lua.hpp"
@@ -28,6 +27,7 @@
 #include "../Tools/Common/Canvas.h"
 #include "../Tools/Common/ImageMatrix.h"
 #include "../Tools/Common/ResourcePack.h"
+#include "bass/bass.h"
 
 lua_State* L = nullptr;
 extern pResourcePack pack;
@@ -246,7 +246,13 @@ int GetSound(lua_State* L)
             }
 #endif /* _WIN32 */
 #ifdef _GTK
-            (void)b_loop;
+            HSTREAM sound = BASS_StreamCreateFile(TRUE, buffer, 0, size,
+                b_loop ? BASS_SAMPLE_LOOP : 0);
+            if (sound)
+            {
+                lua_pushinteger(L, sound);
+                return 1;
+            }
 #endif /* _GTK */
         }
         in.close();
@@ -265,7 +271,13 @@ int GetSound(lua_State* L)
             }
 #endif /* _WIN32 */
 #ifdef _GTK
-            (void)b_loop;
+            HSTREAM sound = BASS_StreamCreateFile(TRUE, buffer, 0, size,
+                b_loop ? BASS_SAMPLE_LOOP : 0);
+            if (sound)
+            {
+                lua_pushinteger(L, sound);
+                return 1;
+            }
 #endif /* _GTK */
         }
     }
@@ -415,6 +427,10 @@ int StopSound(lua_State *L)
         BASS_ChannelStop(sound);
 #endif /* _WIN32 */
 #ifdef _GTK
+    HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
+    lua_pop(L, 1);
+    if (BASS_ACTIVE_PLAYING == BASS_ChannelIsActive(sound))
+        BASS_ChannelStop(sound);
 #endif /* _GTK */
     return 0;
 }
@@ -431,6 +447,10 @@ int SetVolume(lua_State *L)
     BASS_ChannelSetAttribute(sound, BASS_ATTRIB_VOL, volume);
 #endif /* _WIN32 */
 #ifdef _GTK
+    HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
+    float volume = (float)lua_tonumber(L, 2);
+    lua_pop(L, 2);
+    BASS_ChannelSetAttribute(sound, BASS_ATTRIB_VOL, volume);
 #endif /* _GTK */
     return 0;
 }
@@ -446,6 +466,9 @@ int PlaySound(lua_State *L)
     BASS_ChannelPlay(sound, true);
 #endif /* _WIN32 */
 #ifdef _GTK
+    HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
+    lua_pop(L, 1);
+    BASS_ChannelPlay(sound, true);
 #endif /* _GTK */
     return 0;
 }
@@ -546,6 +569,9 @@ bool LuaInit()
 #ifdef _WIN32
     BASS_Init(-1, 44100, 0, 0, 0);
 #endif /* _WIN32 */
+#ifdef _GTK
+    BASS_Init(-1, 44100, 0, 0, 0);
+#endif /* _GTK */
 
     L = luaL_newstate();
     luaL_openlibs(L);
@@ -660,6 +686,9 @@ void OnClean()
 #ifdef _WIN32
     BASS_Free();
 #endif /* _WIN32 */
+#ifdef _GTK
+    BASS_Free();
+#endif /* _GTK */
     lua_close(L);
     L = nullptr;
 }

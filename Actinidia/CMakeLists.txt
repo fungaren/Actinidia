@@ -14,6 +14,24 @@ include_directories(
     ${LUA_INCLUDE_DIRS}
     ${GTK3_INCLUDE_DIRS}
 )
+link_directories(
+    bass/
+)
+if (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm")
+    set(BASS "bass-hardfp")
+elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    set(BASS "bass-aarch64")
+elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "i386")
+    set(BASS "bass-x86")
+elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "i686")
+    set(BASS "bass-x86")
+elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    set(BASS "bass-x86_64")
+else()
+    message(FATAL_ERROR "Unsupported processor: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+endif()
+message(STATUS "Using lib${BASS}.so")
+
 set(CMAKE_CXX_STANDARD 17)
 aux_source_directory(../Tools/Common SOURCES)
 list(APPEND SOURCES
@@ -22,7 +40,6 @@ list(APPEND SOURCES
 )
 set(target ${PROJECT_NAME})
 add_executable(${target} ${SOURCES})
-
 target_link_libraries(
     ${target}
     ${LUA_LIBRARIES}
@@ -30,6 +47,7 @@ target_link_libraries(
     ${PNG_LIBRARIES}
     ${JPEG_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    ${BASS}
     stdc++fs
     pthread
 )
@@ -43,10 +61,13 @@ string(CONCAT CMAKE_CXX_FLAGS_DEBUG
     "-g "               # with debug information
     "-O0 "               # no optimize
     "-Wno-parentheses"   # disable parentheses warning
-    )
+)
 
 string(CONCAT CMAKE_CXX_FLAGS_RELEASE
     "-O3"               # enable optimize
-    )
+)
 
-message(STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE})
+if (CMAKE_BUILD_TYPE STREQUAL "")
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
+message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")

@@ -187,7 +187,7 @@ pImageMatrix Window::getWindowImage() const
     uint32_t* tmp;
     try {
         tmp = new uint32_t[bmpObj.bmWidth*bmpObj.bmHeight];
-    } catch (std::bad_alloc& e) {
+    } catch (std::bad_alloc&) {
         SelectObject(hdc, hobmp);
         DeleteObject(hbmp);
         DeleteObject(hobmp);

@@ -92,7 +92,7 @@ int main(int argc, char** argv)
             pack = ResourcePack::parsePack(game_res);
             bDirectMode = false;
         }
-        catch (std::runtime_error& e) {
+        catch (std::runtime_error&) {
             // no default resource file found, try direct mode
             if (std::filesystem::exists("game") && std::filesystem::is_directory("game"))
                 bDirectMode = true;
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
                 bDirectMode = false;
                 game_res = path.filename();
             }
-            catch (std::runtime_error& e) {
+            catch (std::runtime_error&) {
                 w.alert("Failed to load the resource file", "Error", Window::ERROR);
                 return 1;
             }

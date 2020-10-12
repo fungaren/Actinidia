@@ -517,7 +517,7 @@ int GetSetting(lua_State *L)
         std::string val = user_data.at(key);    // at() will throw std::out_of_range if not exists
         lua_pushlstring(L, val.c_str(), val.size());
     }
-    catch (std::out_of_range& oor) {
+    catch (std::out_of_range&) {
         lua_pushnil(L);
     }
     return 1;

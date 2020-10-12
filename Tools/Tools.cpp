@@ -23,6 +23,7 @@
 #include <filesystem>
 #include "resource.h"
 #include "Common/Canvas.h"
+#include "Common/PiCanvas.h"
 #include "Common/ResourcePack.h"
 
 // HWND of the dialog

@@ -30,7 +30,7 @@ pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t heig
     try {
         table = new uint32_t[(size_t)width * height];
     }
-    catch (std::bad_alloc &e) {
+    catch (std::bad_alloc &) {
         throw std::runtime_error("Cannot allocate memory");
     }
     for (size_t i = 0; i < (size_t)width * height; i++)
@@ -182,7 +182,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     try {
         table = new uint32_t[(size_t)w*h];
     }
-    catch (std::bad_alloc &e) {
+    catch (std::bad_alloc&) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
         throw std::runtime_error("Cannot allocate memory");
     }
@@ -540,7 +540,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     try {
         table = new uint32_t[(size_t)w*h];
     }
-    catch (std::bad_alloc &e) {
+    catch (std::bad_alloc&) {
         jpeg_destroy_decompress(&cinfo);
         throw std::runtime_error("Cannot allocate memory");
     }

@@ -151,6 +151,7 @@ set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/mooction/actinidia")
 set(CPACK_DEBIAN_PACKAGE_SECTION "games")
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "Optional")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "FANG")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libgtk-3-dev, zlib1g-dev, libpng-dev, libjpeg-dev, liblua5.3-dev"
+set(CPACK_DEBIAN_PACKAGE_DEPENDS
+    "libgtk-3-0, zlib1g, libpng16-16, liblua5.3-0, libjpeg62-turbo|libjpeg62"
 )
 include(CPack)

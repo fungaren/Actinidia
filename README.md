@@ -49,7 +49,10 @@ sudo apt-get install g++-8 cmake
 Install dependent libraries:
 
 ```bash
-sudo apt-get install -y libgtk-3-dev zlib1g-dev libpng-dev libjpeg-dev liblua5.3-dev
+# Debian
+sudo apt-get install -y libgtk-3-dev zlib1g-dev libpng-dev liblua5.3-dev libjpeg62-turbo-dev
+# Ubuntu
+sudo apt-get install -y libgtk-3-dev zlib1g-dev libpng-dev liblua5.3-dev libjpeg62-dev
 ```
 
 Clone this repository and build:

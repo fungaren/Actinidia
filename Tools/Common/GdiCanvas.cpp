@@ -4,10 +4,11 @@
 #ifdef _WIN32
     #include <windows.h>
     #undef max
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     #include <gtk/gtk.h>
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
 #include <fstream>
 #include "ImageMatrix.h"
 #include "GdiCanvas.h"
@@ -20,8 +21,8 @@ void GdiCanvas::fillSolidRect(int left, int top, int right, int bottom, color fi
     ExtTextOut(hdc, 0, 0, ETO_OPAQUE, &rect, NULL, 0, NULL);
 }
 
-bool GdiCanvas::printText(int x, int y, std::wstring str, uint16_t len,
-    std::wstring fontName, uint8_t fontSize, color fontColor, CharStyle style) const
+bool GdiCanvas::printText(int x, int y, const string_t& str, uint16_t len,
+    const string_t& fontName, uint8_t fontSize, color fontColor, CharStyle style) const
 {
     uint32_t font_weight = style & Constant::style_bold ? 700 : 400;
     HFONT fn = CreateFont(fontSize, 0, 0, 0, font_weight, FALSE, FALSE, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS,
@@ -70,7 +71,7 @@ void GdiCanvas::drawLine(int x1, int y1, int x2, int y2, LineStyle ls, color lin
 void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
 {
     if (imSrc->getMatrix() == nullptr)
-        throw std::invalid_argument("ImageMatrix is not initialized");
+        throw ustr_error(ustr("ImageMatrix is not initialized"));
     int yRange, yStart;
     if (yDest < 0) {
         yRange = yDest + imSrc->getHeight();
@@ -106,7 +107,7 @@ void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
     bmih.biClrUsed = 0;
     bmih.biCompression = BI_RGB;
     bmih.biWidth = xRange;
-    bmih.biHeight = -yRange;    // top-down image 
+    bmih.biHeight = -yRange;    // top-down image
     bmih.biPlanes = 1;
     bmih.biSize = 40;
     bmih.biSizeImage = size * sizeof(color);
@@ -115,7 +116,7 @@ void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
 
     SetDIBitsToDevice(hdc, //handle to DC
         xDest,  // x-coord of destination upper-left corner
-        yDest,  // y-coord of destination upper-left corner 
+        yDest,  // y-coord of destination upper-left corner
         xRange, // source rectangle width
         yRange, // source rectangle height
         0,      // x-coord of source lower-left corner (bmih.biHeight => upper-left)
@@ -134,7 +135,7 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
     int xSrc, int ySrc, int srcWidth, int srcHeight) const
 {
     if (imSrc->getMatrix() == nullptr)
-        throw std::invalid_argument("ImageMatrix is not initialized");
+        throw ustr_error(ustr("ImageMatrix is not initialized"));
 
     if (xSrc < 0 || ySrc < 0)
         return;
@@ -162,7 +163,7 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
         xRange = destWidth;
         xStart = 0;
     }
-    
+
     uint32_t size = xRange * yRange;
     color* buffer = new color[size];
     uint32_t i = 0;
@@ -184,7 +185,7 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
     bmih.biClrUsed = 0;
     bmih.biCompression = BI_RGB;
     bmih.biWidth = xRange;
-    bmih.biHeight = -yRange;    // top-down image 
+    bmih.biHeight = -yRange;    // top-down image
     bmih.biPlanes = 1;
     bmih.biSize = 40;
     bmih.biSizeImage = size * sizeof(color);
@@ -193,7 +194,7 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
 
     SetDIBitsToDevice(hdc, //handle to DC
         xDest,  // x-coord of destination upper-left corner
-        yDest,  // y-coord of destination upper-left corner 
+        yDest,  // y-coord of destination upper-left corner
         xRange, // source rectangle width
         yRange, // source rectangle height
         0,      // x-coord of source lower-left corner (bmih.biHeight => upper-left)
@@ -206,8 +207,9 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
         );
     delete[] buffer;
 }
-#endif /* _WIN32 */
-#ifdef _GTK
+
+#elif defined _GTK
+
 void GdiCanvas::fillSolidRect(int left, int top, int right, int bottom, color c) const
 {
     cairo_set_source_rgb(cr, redChannelf(c), greenChannelf(c), blueChannelf(c));
@@ -215,8 +217,8 @@ void GdiCanvas::fillSolidRect(int left, int top, int right, int bottom, color c)
     cairo_fill(cr);
 }
 
-bool GdiCanvas::printText(int x, int y, std::wstring str, uint16_t len,
-    std::wstring fontName, uint8_t fontSize, color fontColor, 
+bool GdiCanvas::printText(int x, int y, const string_t& str, uint16_t len,
+    const string_t& fontName, uint8_t fontSize, color fontColor,
     CharStyle style) const
 {
     return true;
@@ -242,14 +244,14 @@ void GdiCanvas::rectangle(int left, int top, int right, int bottom,
     cairo_set_line_width(cr, 1);
     /* cairo_set_dash */
     cairo_rectangle(cr, left, top, right-left, bottom-top);
-    cairo_stroke(cr); 
+    cairo_stroke(cr);
 }
 
 // Do not support alpha blend. The alpha channel will be discarded.
 void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
 {
     if (imSrc->getMatrix() == nullptr)
-        throw std::invalid_argument("ImageMatrix is not initialized");
+        throw ustr_error(ustr("ImageMatrix is not initialized"));
     int yRange, yStart;
     if (yDest < 0) {
         yRange = yDest + imSrc->getHeight();
@@ -289,10 +291,10 @@ void GdiCanvas::paste(const pImageMatrix imSrc, int xDest, int yDest) const
         stride  // the number of bytes between the start of rows in the buffer as allocated.
     );
     cairo_set_source_surface(cr, surface, xDest, yDest);
-    
+
     cairo_rectangle(cr, xDest, yDest, xRange, yRange);
     cairo_fill(cr);
-    cairo_stroke(cr); 
+    cairo_stroke(cr);
 
     cairo_surface_finish(surface);
     // cairo_surface_destroy(surface)
@@ -306,7 +308,7 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
     int xSrc, int ySrc, int srcWidth, int srcHeight) const
 {
     if (imSrc->getMatrix() == nullptr)
-        throw std::invalid_argument("ImageMatrix is not initialized");
+        throw ustr_error(ustr("ImageMatrix is not initialized"));
 
     if (xSrc < 0 || ySrc < 0)
         return;
@@ -360,13 +362,15 @@ void GdiCanvas::paste(const pImageMatrix imSrc,
         stride  // the number of bytes between the start of rows in the buffer as allocated.
     );
     cairo_set_source_surface(cr, surface, xDest, yDest);
-    
+
     cairo_rectangle(cr, xDest, yDest, xRange, yRange);
     cairo_fill(cr);
-    cairo_stroke(cr); 
+    cairo_stroke(cr);
 
     cairo_surface_finish(surface);
     delete[] buffer;
 }
 
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif

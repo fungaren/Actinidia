@@ -4,10 +4,11 @@
 #ifdef _WIN32
     #include <windows.h>
     #undef max
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     #include <gtk/gtk.h>
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
 #include "Window.h"
 #include "Keycodes.h"
 
@@ -132,11 +133,6 @@ void Window::refresh()
     InvalidateRect(hWnd, &rc, FALSE);
 }
 
-void Window::alert(const char* str, const char* title, MessageType type)
-{
-    MessageBoxA(hWnd, str, title, type | MB_OK);
-}
-
 void Window::alert(const string_t& str, const string_t& title, MessageType type)
 {
     MessageBoxW(hWnd, str.c_str(), title.c_str(), type | MB_OK);
@@ -201,7 +197,7 @@ pImageMatrix Window::getWindowImage() const
     DeleteObject(hobmp);
     DeleteDC(hdc);
 
-    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, bmpObj.bmWidth, bmpObj.bmHeight);
+    pImageMatrix im = ImageMatrixFactory::fromPixelData(tmp, (uint16_t)bmpObj.bmWidth, (uint16_t)bmpObj.bmHeight);
     im->discardAlphaChannel();
     return im;
 }
@@ -229,12 +225,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     Window w;
     w.argv = CommandLineToArgvW(lpCmdLine, &w.argc);
-    w.create(L"demo");
+    w.create(ustr("demo"));
 }
 #endif /* UNIT_TEST */
 
-#endif /* _WIN32 */
-#ifdef _GTK
+
+#elif defined _GTK
 
 gboolean keydown(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 {
@@ -265,7 +261,7 @@ gboolean btndown(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
         w->getLButtonDownHandler()(modifiers, event->x, event->y);
     else if (event->button == GDK_BUTTON_SECONDARY)
         w->getRButtonDownHandler()(modifiers, event->x, event->y);
-    if (event->type == GDK_2BUTTON_PRESS) 
+    if (event->type == GDK_2BUTTON_PRESS)
         ; // double click
     return TRUE;
 }
@@ -316,13 +312,13 @@ gboolean mousewheel(GtkWidget *widget, GdkEventScroll *event, gpointer user_data
         modifiers |= GDK_KEY_Alt_L;
     if (event->direction == GDK_SCROLL_UP)
         w->getMouseWheelHandler()(modifiers,
-            (short)event->delta_y, 
-            (int)event->x_root, 
+            (short)event->delta_y,
+            (int)event->x_root,
             (int)event->y_root);
     else if (event->direction == GDK_SCROLL_DOWN)
-        w->getMouseWheelHandler()(modifiers, 
-            (short)-event->delta_y, 
-            (int)event->x_root, 
+        w->getMouseWheelHandler()(modifiers,
+            (short)-event->delta_y,
+            (int)event->x_root,
             (int)event->y_root);
     return TRUE;
 }
@@ -330,10 +326,10 @@ gboolean mousewheel(GtkWidget *widget, GdkEventScroll *event, gpointer user_data
 gboolean paint(GtkWidget *widget, cairo_t *cr, gpointer user_data)
 {
     /*
-     * Don't need to restore cr. The signal emission takes care of 
-     * calling cairo_save() before and cairo_restore() after invoking 
+     * Don't need to restore cr. The signal emission takes care of
+     * calling cairo_save() before and cairo_restore() after invoking
      * the handler.
-     * To avoid redrawing themselves completely, one can get the full 
+     * To avoid redrawing themselves completely, one can get the full
      * extents of the clip region with cairo_copy_clip_rectangle_list().
      */
     Window *w = (Window *)user_data;
@@ -400,8 +396,8 @@ void activate(GtkApplication* app, gpointer user_data)
     gtk_widget_add_events(draw_area,
         GDK_POINTER_MOTION_MASK |
         GDK_BUTTON_MOTION_MASK |
-        GDK_BUTTON_PRESS_MASK | 
-        GDK_BUTTON_RELEASE_MASK | 
+        GDK_BUTTON_PRESS_MASK |
+        GDK_BUTTON_RELEASE_MASK |
         GDK_SCROLL_MASK );
     g_signal_connect(draw_area, "button-press-event", G_CALLBACK(btndown), w);
     g_signal_connect(draw_area, "button-release-event", G_CALLBACK(btnup), w);
@@ -428,15 +424,15 @@ void Window::refresh()
     gtk_widget_queue_draw_area(wnd, 0, 0, w, h);
 }
 
-void Window::alert(const char* str, const char* title, MessageType type)
-{  
+void Window::alert(const string_t& str, const string_t& title, MessageType type)
+{
     /*
      * The message box icon may not display, don't know why.
      */
     if (app == nullptr)
     {
         // not initialized yet, just print the message
-        fprintf(stderr, "%s: %s\n", title, str);
+        fprintf(stderr, "%s: %s\n", title.c_str(), str.c_str());
         return;
     }
     GtkWidget *dialog = gtk_message_dialog_new(
@@ -444,15 +440,10 @@ void Window::alert(const char* str, const char* title, MessageType type)
         GTK_DIALOG_MODAL,
         (GtkMessageType)type,
         GTK_BUTTONS_OK,
-        str );
-    gtk_window_set_title(GTK_WINDOW(dialog), title);
+        str.c_str() );
+    gtk_window_set_title(GTK_WINDOW(dialog), title.c_str());
     gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
-}
-
-void Window::alert(const string_t& str, const string_t& title, MessageType type)
-{
-    alert(str.c_str(), title.c_str(), type);
 }
 
 void Window::setTitle(const string_t& str)
@@ -492,7 +483,7 @@ pImageMatrix Window::getWindowImage() const
     if (pixbuf == nullptr)
         return nullptr;
 
-    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);  
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
     cairo_t *cr = cairo_create(surface);
     gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
     cairo_paint(cr);
@@ -508,11 +499,15 @@ pImageMatrix Window::getWindowImage() const
 }
 
 #ifdef UNIT_TEST
+#include <iostream>
+
 int main(int argc, char* argv[])
 {
-    if (argc < 2)
-        return -1;
-    pImageMatrix im = ImageMatrixFactory::openImage(argv[1]);
+    if (argc < 2) {
+        std::cout << "Usage: " << argv[0] << " <IMAGE_FILE>\n";
+        return 1;
+    }
+    pImageMatrix im = ImageMatrixFactory::fromImageFile(argv[1]);
     Window w;
     w.argc = argc;
     w.argv = argv;
@@ -551,11 +546,11 @@ int main(int argc, char* argv[])
         gdi.drawLine(x1, y1, x2, y2, Canvas::LineStyle::none, Canvas::Constant::cyan);
         if (x_pic != 0 && y_pic != 0)
         {
-            gdi.paste(im, x_pic-im->getWidth()*0.5, y_pic-im->getHeight()*0.5, 
-                im->getWidth()*0.5, im->getHeight()*0.5, 
+            gdi.paste(im, x_pic-im->getWidth()*0.5, y_pic-im->getHeight()*0.5,
+                im->getWidth()*0.5, im->getHeight()*0.5,
                 0, 0, im->getWidth()/2, im->getHeight()/2
                 );
-            gdi.paste(im, x_pic, y_pic, im->getWidth()*0.5, im->getHeight()*0.5, 
+            gdi.paste(im, x_pic, y_pic, im->getWidth()*0.5, im->getHeight()*0.5,
                 im->getWidth()/2, im->getHeight()/2, im->getWidth()/2, im->getHeight()/2
                 );
         }
@@ -564,4 +559,6 @@ int main(int argc, char* argv[])
     return 0;
 }
 #endif /* UNIT_TEST */
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif

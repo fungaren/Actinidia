@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, FANG All rights reserved.
+ * Copyright (c) 2021, FANG All rights reserved.
  */
 #pragma once
 #ifdef _WIN32
@@ -8,20 +8,20 @@
     #include "../libpng/png.h"
     #include "../zlib/zlib.h"
     extern "C" {
-    #include "../libjpeg/jpeglib.h"
+        #include "../libjpeg/jpeglib.h"
     }
-#endif /* _WIN32 */
-#ifdef _GTK
-    #include "png.h"
-    #include "zlib.h"
-    #include "jpeglib.h"
-#endif /* _GTK */
-#include <cstdint>
-#include <cstring>
-#include <codecvt>
-#include <locale>
+#elif defined _GTK
+    #include <png.h>
+    #include <zlib.h>
+    #include <jpeglib.h>
+    #include <cstring>
+#else
+#error unsupported platform
+#endif
 #include <stdexcept>
 #include <memory>
+
+#include "Base.h"
 
 class Matrix {
 protected:
@@ -36,11 +36,11 @@ public:
 
 class ImageMatrix : Matrix {
     friend class ImageMatrixFactory;
-    
+
     uint32_t* matrix;
     uint16_t width;
     uint16_t height;
-    
+
     ImageMatrix(uint32_t *table, uint16_t width, uint16_t height)
         : matrix(table), width(width), height(height)
     {}
@@ -106,57 +106,22 @@ class ImageMatrixFactory {
     static void dumpJpegFile(const pImageMatrix im, FILE *fp, uint8_t quality);
     static void dumpPngFile(const pImageMatrix im, FILE *fp);
 
-    /**
-     * @param str A wide-char string.
-     * @return A UTF-8 encoded C-type string.
-     */
-    static const char* utf8(const std::wstring& str) {
-        static std::string s; // for temporary use
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> cvt;
-        s = cvt.to_bytes(str);
-        return s.c_str();
-    }
-    
-    static FILE* openfile(const char* path, const char* mode) noexcept(false) {
+    static FILE* openfile(const string_t& path, const char_t *mode) noexcept(false) {
         FILE *fp;
 #ifdef _WIN32
         char buffer[240];
-        if (fopen_s(&fp, path, mode))
+        if (_wfopen_s(&fp, path.c_str(), mode))
         {
             strerror_s(buffer, sizeof buffer, errno);
-            throw std::runtime_error(
-                std::string("Failed to open file: ") + buffer
-            );
+            throw ustr_error(fromUTF8(std::string("Failed to open file: ") + buffer));
         }
-#endif /* _WIN32 */
-#ifdef _GTK
-        fp = fopen(path, mode);
+#elif defined _GTK
+        fp = fopen(path.c_str(), mode);
         if (fp == NULL)
-            throw std::runtime_error(
-                std::string("Failed to open file: ") + strerror(errno)
-            );
-#endif /* _GTK */
-        return fp;
-    }
-    static FILE* openfile(const wchar_t* path, const wchar_t* mode) noexcept(false) {
-        FILE *fp;
-#ifdef _WIN32
-        char buffer[240];
-        if (_wfopen_s(&fp, path, mode))
-        {
-            strerror_s(buffer, sizeof buffer, errno);
-            throw std::runtime_error(
-                std::string("Failed to open file: ") + buffer
-            );
-        }
-#endif /* _WIN32 */
-#ifdef _GTK
-        fp = fopen(utf8(path), utf8(mode));
-        if (fp == NULL)
-            throw std::runtime_error(
-                std::string("Failed to open file: ") + strerror(errno)
-            );
-#endif /* _GTK */
+            throw ustr_error(string_t("Failed to open file: ") + strerror(errno));
+#else
+#error unsupported platform
+#endif
         return fp;
     }
 public:
@@ -180,7 +145,7 @@ public:
         uint32_t* data, uint16_t width, uint16_t height) noexcept(false)
     {
         if (data == nullptr)
-            throw std::runtime_error("buffer pointer is null");
+            throw ustr_error(ustr("Buffer pointer is null"));
         return std::shared_ptr<ImageMatrix>(new ImageMatrix(data, width, height));
     }
 
@@ -197,13 +162,7 @@ public:
      * @param pngFile The file path of the png file.
      * @return A pImageMatrix handle.
      */
-    static pImageMatrix fromPngFile(const char* pngFile) noexcept(false);
-
-    /**
-     * @param pngFile The file path of the png file.
-     * @return A pImageMatrix handle.
-     */
-    static pImageMatrix fromPngFile(const wchar_t* pngFile) noexcept(false);
+    static pImageMatrix fromPngFile(const string_t& pngFile) noexcept(false);
 
     /**
      * @param mp A mem_image structure pointer.
@@ -229,22 +188,16 @@ public:
      * @return A pImageMatrix handle.
      */
     static pImageMatrix fromPngResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
-#endif /* _WIN32 */
-#ifdef _GTK
-
-#endif /* _GTK */
-
-    /**
-     * @param jpegFile The file path of the jpeg file.
-     * @return A pImageMatrix handle.
-     */
-    static pImageMatrix fromJpegFile(const char* jpegFile) noexcept(false);
+#elif defined _GTK
+#else
+#error unsupported platform
+#endif
 
     /**
      * @param jpegFile The file path of the jpeg file.
      * @return A pImageMatrix handle.
      */
-    static pImageMatrix fromJpegFile(const wchar_t* jpegFile) noexcept(false);
+    static pImageMatrix fromJpegFile(const string_t& jpegFile) noexcept(false);
 
     /**
      * @param mp A mem_image structure pointer.
@@ -270,27 +223,25 @@ public:
      * @return A pImageMatrix handle.
      */
     static pImageMatrix fromJpegResource(UINT nResID, LPCTSTR lpType, HMODULE hModule) noexcept(false);
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
+#else
+#error unsupported platform
+#endif
 
-#endif /* _GTK */
-    
     /**
-     * @param imageFile The file path of the image file. Only png and jpeg 
+     * @param imageFile The file path of the image file. Only png and jpeg
      *                  format are supported.
      * @return A pImageMatrix handle.
      */
-    static pImageMatrix openImage(const char* imageFile) noexcept(false)
+    static pImageMatrix fromImageFile(const string_t& imageFile) noexcept(false)
     {
-        std::string extname = imageFile + strlen(imageFile) - 3;
-        if (extname == "png" || extname == "PNG")
+        string_t extname = imageFile.substr(imageFile.size() - 3);
+        if (extname == ustr("png") || extname == ustr("PNG"))
             return ImageMatrixFactory::fromPngFile(imageFile);
-        else if (extname == "jpg" || extname == "JPG")
+        else if (extname == ustr("jpg") || extname == ustr("JPG"))
             return ImageMatrixFactory::fromJpegFile(imageFile);
-        else 
-            throw std::runtime_error(
-                std::string("Unknown image file: ") + imageFile
-            );
+        else
+            throw ustr_error(ustr("Unknown image file"));
     }
 
     /**
@@ -298,28 +249,13 @@ public:
      * @param filePath the save path of the jpeg file.
      * @param quality range [1,100]
      */
-    static void dumpJpegFile(const pImageMatrix im, 
-        const char* filePath, uint8_t quality = 80) noexcept(false);
-
-    /**
-     * @param im pImageMatix handle
-     * @param filePath the save path of the jpeg file.
-     * @param quality range [1,100]
-     */
-    static void dumpJpegFile(const pImageMatrix im, 
-        const wchar_t* filePath, uint8_t quality = 80) noexcept(false);
+    static void dumpJpegFile(const pImageMatrix im,
+        const string_t& filePath, uint8_t quality = 80) noexcept(false);
 
     /**
      * @param im pImageMatix handle
      * @param filePath the save path of the png file.
      */
-    static void dumpPngFile(const pImageMatrix im, 
-        const char* filePath) noexcept(false);
-
-    /**
-     * @param im pImageMatix handle
-     * @param filePath the save path of the png file.
-     */
-    static void dumpPngFile(const pImageMatrix im, 
-        const wchar_t* filePath) noexcept(false);
+    static void dumpPngFile(const pImageMatrix im,
+        const string_t& filePath) noexcept(false);
 };

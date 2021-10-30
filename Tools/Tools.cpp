@@ -21,6 +21,7 @@
 
 #include <thread>
 #include <filesystem>
+
 #include "resource.h"
 #include "Common/Canvas.h"
 #include "Common/PiCanvas.h"
@@ -50,27 +51,28 @@ inline void enableButtons()
 }
 
 std::thread task;
-bool userClosed = false;    // if user closed the window, do not update window controls when tasks finished
+bool userClosed = false;    // Avoid updating window controls if the window has closed
 
 using namespace std::filesystem;
-void deployPack(const std::wstring& destFile, const path& resDirectory)
+void deployPack(const string_t& destFile, const string_t& dir)
 {
     SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0, (LPARAM)L"Generating...");
     disableButtons();
     if (task.joinable()) task.join();
     task = std::thread([=]() {
-        auto&& queue = walkFolder(resDirectory);
+        std::list<walk_layer>&& tree = walkFolder(path{ dir }.to_ustr());
         HWND hwndPB = GetDlgItem(hWnd, IDC_PROGRESS);
-        size_t cb = std::get<0>(queue.front()).dataSize;
+        size_t dataSize = tree.front().e.dataSize;
         size_t count = 0;
-        SendMessage(hwndPB, PBM_SETRANGE, 0, MAKELPARAM(0, cb / 2048)); // range(0, cb/2KB)
-        SendMessage(hwndPB, PBM_SETSTEP, (WPARAM)1, 0); // step 1 => 2KB
-        if (generatePack(path(destFile).u8string(), queue,
+        SendMessage(hwndPB, PBM_SETRANGE, 0, MAKELPARAM(0, dataSize / 2048)); // Range(0, cb/2KB)
+        SendMessage(hwndPB, PBM_SETSTEP, (WPARAM)1, 0); // A step is 2KB
+        SendMessage(hwndPB, PBM_SETPOS, (WPARAM)0, 0); // Reset the progressbar
+        if (generatePack(path{ destFile }.to_ustr(), tree,
             [hwndPB, &count](size_t filesize) {
                 count += filesize;
                 while (count > 2048) {
                     count -= 2048;
-                    SendMessage(hwndPB, PBM_STEPIT, 0, 0); // update progress bar
+                    SendMessage(hwndPB, PBM_STEPIT, 0, 0); // Update progress bar
                 }
             }))
             userClosed ? 0 : SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0,
@@ -82,13 +84,18 @@ void deployPack(const std::wstring& destFile, const path& resDirectory)
     });
 }
 
-void deployUnpack(const path& resFile)
+void deployUnpack(const string_t& resFile)
 {
     SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0, (LPARAM)L"Extracting...");
     disableButtons();
     if (task.joinable()) task.join();
+
+    stringstream_t extract_dir_name;
+    extract_dir_name << "extract_" << time(NULL);
+    path outputDir = path{ resFile }.parent_path() / extract_dir_name.str();
+
     task = std::thread([=]() {
-        if (extractPack(resFile))
+        if (extractPack(path{ resFile }.to_ustr(), outputDir.to_ustr()))
             userClosed ? 0 : SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0,
             (LPARAM)L"The resource file was successfully unpacked.");
         else
@@ -99,30 +106,26 @@ void deployUnpack(const path& resFile)
 }
 
 #include "Common/Canvas.h"
-bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstring>& imgFiles)
+bool imageConcatenate(const string_t& destImage, const std::vector<string_t>& imgFiles)
 {
     std::vector<pImageMatrix> imgs;
     uint32_t width = 0, total_height = 0;
     try {
         for (auto& file : imgFiles) {
-            std::wstring extName = file.substr(file.rfind(L'.') + 1);
-            if (extName == L"png" || extName == L"PNG")
-                imgs.emplace_back(ImageMatrixFactory::fromPngFile(file.c_str()));
-            else
-                imgs.emplace_back(ImageMatrixFactory::fromJpegFile(file.c_str()));
+            imgs.emplace_back(ImageMatrixFactory::fromImageFile(file));
             if (width == 0)
                 width = imgs.back()->getWidth();
             else if (imgs.back()->getWidth() != width)
-                throw std::runtime_error("Images width don't match.\n"\
-                    "Only images with the same width can be concatenated.");
+                throw ustr_error(ustr("Images width don't match.\n"\
+                    "Only images with the same width can be concatenated."));
             total_height += imgs.back()->getHeight();
             if (total_height > std::numeric_limits<uint16_t>::max())
-                throw std::runtime_error("Image height is too large. \n"\
-                    "Reduce the number of images and try again.");
+                throw ustr_error(ustr("Image height is too large. \n"\
+                    "Reduce the number of images and try again."));
         }
     }
-    catch (std::runtime_error e) {
-        MessageBoxA(NULL, e.what(), "Error", MB_OK | MB_ICONERROR);
+    catch (ustr_error& e) {
+        MessageBox(NULL, e.what().c_str(), L"Error", MB_OK | MB_ICONERROR);
         return false;
     }
     auto temp = ImageMatrixFactory::createBufferImage(width, total_height, Canvas::Constant::alpha);
@@ -132,33 +135,33 @@ bool imageConcatenate(const std::wstring& destImage, const std::vector<std::wstr
         y += i->getHeight();
     }
     try {
-        std::wstring extName = destImage.substr(destImage.rfind(L'.') + 1);
+        string_t extName = destImage.substr(destImage.rfind(L'.') + 1);
         if (extName == L"png" || extName == L"PNG")
-            ImageMatrixFactory::dumpPngFile(temp, destImage.c_str());
+            ImageMatrixFactory::dumpPngFile(temp, destImage);
         else
-            ImageMatrixFactory::dumpJpegFile(temp, destImage.c_str(), 100);
+            ImageMatrixFactory::dumpJpegFile(temp, destImage, 100);
     }
-    catch (std::runtime_error e) {
-        MessageBoxA(NULL, e.what(), "Error", MB_OK | MB_ICONERROR);
+    catch (ustr_error& e) {
+        MessageBox(NULL, e.what().c_str(), L"Error", MB_OK | MB_ICONERROR);
         return false;
     }
     return true;
 }
 
-void deployImageContatenate(const std::wstring& destImage, std::vector<std::wstring>& imgFiles)
+void deployImageContatenate(const string_t& destImage, std::vector<string_t>& imgFiles)
 {
     SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0, (LPARAM)L"Concatenating...");
     // sort files by their names
-    std::sort(imgFiles.begin(), imgFiles.end(), [](const std::wstring& a, const std::wstring& b) -> bool{
+    std::sort(imgFiles.begin(), imgFiles.end(), [](const string_t& a, const string_t& b) -> bool{
         size_t p1 = a.rfind(L'\\');
-        std::wstring n1 = (p1 == std::wstring::npos ? a : a.substr(p1 + 1));
+        string_t n1 = (p1 == string_t::npos ? a : a.substr(p1 + 1));
         size_t p2 = b.rfind(L'\\');
-        std::wstring n2 = (p2 == std::wstring::npos ? b : b.substr(p2 + 1));
+        string_t n2 = (p2 == string_t::npos ? b : b.substr(p2 + 1));
         return n1.compare(n2) < 0;
     });
     disableButtons();
     if (task.joinable()) task.join();
-    task = std::thread([](const std::wstring& destImage, const std::vector<std::wstring>& imgFiles) {
+    task = std::thread([](const string_t& destImage, const std::vector<string_t>& imgFiles) {
         if (imageConcatenate(destImage, imgFiles))
             userClosed ? 0 : SendDlgItemMessage(hWnd, IDC_STATUS, WM_SETTEXT, 0,
             (LPARAM)L"Selected images were successfully concatenated.");
@@ -216,7 +219,7 @@ inline void setOFN(OPENFILENAME& ofn, LPCTSTR lpstrFilter, LPCTSTR lpstrDefExt)
 #include <shlobj_core.h>
 void onPack()
 {
-    TCHAR tempPath[MAX_PATH];
+    char_t tempPath[MAX_PATH];
     *tempPath = L'\0';
     BROWSEINFO bi;
     bi.pidlRoot = NULL;
@@ -227,15 +230,15 @@ void onPack()
     bi.lpfn = NULL;
     bi.lParam = NULL;
     bi.iImage = NULL;
-    LPITEMIDLIST pIDList = SHBrowseForFolderW(&bi);
+    LPITEMIDLIST pIDList = SHBrowseForFolder(&bi);
     if (pIDList <= 0)
         return;
 
-    SHGetPathFromIDListW(pIDList, tempPath);
+    SHGetPathFromIDList(pIDList, tempPath);
     CoTaskMemFree(pIDList);
 
-    path root(tempPath);
-    if (!exists(root))
+    string_t dir = tempPath;
+    if (!exists(dir))
         return;
 
     *tempPath = L'\0';
@@ -246,12 +249,12 @@ void onPack()
     if (GetSaveFileName(&ofn) <= 0)
         return;
 
-    deployPack(tempPath, root);
+    deployPack(tempPath, dir);
 }
 
 void onUnpack()
 {
-    TCHAR tempPath[MAX_PATH];
+    char_t tempPath[MAX_PATH];
     *tempPath = L'\0';
 
     OPENFILENAME ofn;
@@ -267,10 +270,11 @@ void onUnpack()
 
 void onImageConcatenate()
 {
-    // max 100 files
+    // Max 100 files
     #define FILE_LIST_BUFFER_SIZE ((100 * (MAX_PATH + 1)) + 1)
-    wchar_t* tempPath = new wchar_t[FILE_LIST_BUFFER_SIZE];
-    *tempPath = L'\0';
+
+    char_t* tempPath = new char_t[FILE_LIST_BUFFER_SIZE];
+    tempPath[0] = L'\0';
 
     OPENFILENAME ofn;
     ofn.lpstrFile = tempPath;
@@ -281,10 +285,10 @@ void onImageConcatenate()
     if (GetOpenFileName(&ofn) <= 0)
         return;
 
-    std::vector<std::wstring> file_list;
-    std::wstring baseDir(tempPath, ofn.nFileOffset - 1);
-    for (TCHAR* p = tempPath + ofn.nFileOffset; *p; ++p) {
-        std::wstring file_name = p;
+    std::vector<string_t> file_list;
+    string_t baseDir(tempPath, ofn.nFileOffset - 1);
+    for (char_t* p = tempPath + ofn.nFileOffset; *p; ++p) {
+        string_t file_name = p;
         file_list.push_back(baseDir + L'\\' + file_name);
         p += file_name.size();
     }
@@ -308,7 +312,7 @@ void onImageConcatenate()
 
 void dragFiles(HDROP hDrop)
 {
-    TCHAR tempPath[MAX_PATH];
+    char_t tempPath[MAX_PATH];
     *tempPath = L'\0';
 
     UINT NumOfFiles = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, NULL);
@@ -316,9 +320,10 @@ void dragFiles(HDROP hDrop)
     {
         DragQueryFile(hDrop, 0, tempPath, MAX_PATH);
         DragFinish(hDrop);
-        path file(tempPath);
-        if (is_directory(file)) // pack resource
+        string_t file = tempPath;
+        if (is_directory(file))
         {
+            // Pack resource
             *tempPath = L'\0';
             OPENFILENAME ofn;
             ofn.lpstrFile = tempPath;
@@ -328,26 +333,16 @@ void dragFiles(HDROP hDrop)
                 return;
             deployPack(tempPath, file);
         }
-        else // unpack resource
+        else
         {
-            // check resource format
-            std::size_t p = file.wstring().rfind(L'.');
-            if (p == std::wstring::npos) {
-                MessageBox(hWnd, L"Unknown resource format", L"Error", MB_OK | MB_ICONWARNING);
-                return;
-            }
-            if (file.wstring().substr(p + 1) == L"res")
-                deployUnpack(file);
-            else {
-                MessageBox(hWnd, L"Only Actinidia resource package is supported", L"Error", MB_OK | MB_ICONWARNING);
-                return;
-            }
+            // Unpack resource
+            deployUnpack(file);
         }
     }
-    else 
+    else
     {
-        // image concatenate
-        std::vector<std::wstring> file_list;
+        // Image concatenate
+        std::vector<string_t> file_list;
         for (UINT i = 0; i < NumOfFiles; i++)
         {
             DragQueryFile(hDrop, i, tempPath, MAX_PATH);
@@ -355,15 +350,15 @@ void dragFiles(HDROP hDrop)
 
             // Check file format
             std::size_t p = file_list.back().rfind(L'.');
-            if (p == std::wstring::npos) {
+            if (p == string_t::npos) {
                 MessageBox(hWnd, L"Unknown image format", L"Error", MB_OK | MB_ICONWARNING);
                 DragFinish(hDrop);
                 return;
             }
-            std::wstring extName = file_list.back().substr(p + 1);
-            
-            if (extName == L"jpg" || extName == L"jpeg" || extName == L"png" ||
-                extName == L"JPG" || extName == L"JPEG" || extName == L"PNG")
+            string_t extName = file_list.back().substr(p + 1);
+
+            if (extName == L"jpg" || extName == L"png" ||
+                extName == L"JPG" || extName == L"PNG")
                 continue;
             else {
                 MessageBox(hWnd, L"Only image files are supported", L"Error", MB_OK | MB_ICONWARNING);
@@ -388,10 +383,10 @@ void dragFiles(HDROP hDrop)
 //---------------------------------------------
 #include <set>
 const int char_width = 32, char_height = 32;
-TCHAR characters[4096], fontName[32];
+char_t characters[4096], fontName[32];
 bool GenerateFontImage(int chars_per_line)
 {
-    TCHAR tempPath[MAX_PATH];
+    char_t tempPath[MAX_PATH];
     *tempPath = L'\0';
     OPENFILENAME ofn;
     ofn.lpstrFile = tempPath;
@@ -399,14 +394,14 @@ bool GenerateFontImage(int chars_per_line)
     setOFN(ofn, L"PNG File (*.png)\0*.png\0\0", L"png");
     if (GetSaveFileName(&ofn) <= 0)
         return false;
-    std::set<wchar_t, std::less<>> charset;
-    for (TCHAR* i = characters; *i; i++)
+    std::set<char_t, std::less<>> charset;
+    for (char_t* i = characters; *i; i++)
     {
         charset.insert(*i);
     }
     int width = chars_per_line * char_width;
     int height = char_height + (int)charset.size() / chars_per_line * char_height;
-    
+
     HDC tdc = GetDC(hWnd);
     HDC hdc = CreateCompatibleDC(NULL);
     HBITMAP hbmp = CreateCompatibleBitmap(tdc, width, height);
@@ -496,7 +491,7 @@ INT_PTR CALLBACK FontImg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             int chars_per_line = _wtoi(characters);
             if (chars_per_line == 0)
             {
-                MessageBox(hDlg, L"Invalid number of chars per line.", L"ERROR", MB_ICONERROR);
+                MessageBox(hDlg, L"Invalid number of chars per line.", L"Error", MB_ICONERROR);
                 break;
             }
             GetWindowText(GetDlgItem(hDlg, IDC_ALLCHARS), characters, sizeof characters / sizeof TCHAR);
@@ -513,6 +508,7 @@ INT_PTR CALLBACK FontImg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         default:
             break;
         }
+        return (INT_PTR)FALSE;
     default:
         return (INT_PTR)FALSE;
     }

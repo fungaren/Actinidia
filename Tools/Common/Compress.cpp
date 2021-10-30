@@ -5,53 +5,34 @@
     #include <windows.h>
     #undef max
     #include "../zlib/zlib.h"
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     #include "zlib.h"
-#endif /* _GTK */
-#include <string>
-#include <fstream>
-#include <filesystem>
+#else
+#error unsupported platform
+#endif
+
 #include "Compress.h"
 
 #ifndef _ASSERT
     #define _ASSERT(...)
 #endif /* _ASSERT */
 
-std::string zerr(int code)
-{
-	switch (code)
-	{
-	case Z_ERRNO:
-		return "error reading/writing stream";
-	case Z_STREAM_ERROR:
-		return "invalid compression level";
-	case Z_DATA_ERROR:
-		return "invalid or incomplete deflate data\n";
-	case Z_MEM_ERROR:
-		return "out of memory";
-	case Z_VERSION_ERROR:
-		return "zlib version of the library linked mismatch!";
-	}
-	return "unknown error";
-}
-
-std::wstring zerrw(int code)
+string_t zerr(int code)
 {
     switch (code)
     {
     case Z_ERRNO:
-        return L"error reading/writing stream";
+        return ustr("error reading/writing stream");
     case Z_STREAM_ERROR:
-        return L"invalid compression level";
+        return ustr("invalid compression level");
     case Z_DATA_ERROR:
-        return L"invalid or incomplete deflate data\n";
+        return ustr("invalid or incomplete deflate data");
     case Z_MEM_ERROR:
-        return L"out of memory";
+        return ustr("out of memory");
     case Z_VERSION_ERROR:
-        return L"zlib version of the library linked mismatch!";
+        return ustr("zlib version of the library linked mismatch!");
     }
-    return L"unknown error";
+    return ustr("unknown error");
 }
 
 #define CHUNK 4096
@@ -144,6 +125,7 @@ int decompress(std::istream& source, std::ostream& dest)
             case Z_NEED_DICT:
                 ret = Z_DATA_ERROR;     /* and fall through */
             case Z_DATA_ERROR:
+                [[fallthrough]];
             case Z_MEM_ERROR:
                 (void)inflateEnd(&strm);
                 return ret;

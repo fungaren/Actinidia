@@ -1,19 +1,13 @@
 /*
  * Copyright (c) 2020, FANG All rights reserved.
  */
-#ifdef _WIN32
-
-#endif /* _WIN32 */
-#ifdef _GTK
-
-#endif /* _GTK */
 #include "ImageMatrix.h"
 #include "PiCanvas.h"
 
 Canvas::color PiCanvas::getPixel(const pImageMatrix im, int x, int y) noexcept(false)
 {
     if (x < 0 || y < 0 || x >= im->getWidth() || y >= im->getHeight())
-        throw (std::invalid_argument("Coordinate out of range"));
+        throw ustr_error(ustr("Coordinate out of range"));
     else
         return _color(im, x, y);
 }
@@ -21,7 +15,7 @@ Canvas::color PiCanvas::getPixel(const pImageMatrix im, int x, int y) noexcept(f
 void PiCanvas::fillSolidRect(pImageMatrix im, int left, int top, int right, int bottom, color fillColor)
 {
     if (im->getMatrix() == nullptr)
-        throw std::invalid_argument("ImageMatrix is not initialized");
+        throw ustr_error(ustr("ImageMatrix is not initialized"));
 
     if (left < 0) left = 0;
     if (top < 0) top = 0;
@@ -38,7 +32,7 @@ void PiCanvas::fillSolidRect(pImageMatrix im, int left, int top, int right, int 
 void PiCanvas::drawLine(pImageMatrix im, int x1, int y1, int x2, int y2, LineStyle ls, color lineColor)
 {
     if (im->getMatrix() == nullptr)
-        throw std::invalid_argument("ImageMatrix is not initialized");
+        throw ustr_error(ustr("ImageMatrix is not initialized"));
 
     uint16_t h = im->getHeight();
     uint16_t w = im->getWidth();
@@ -202,9 +196,9 @@ void PiCanvas::blend(pImageMatrix imDest, const pImageMatrix imSrc,
     int xDest, int yDest, uint8_t opacity)
 {
     if (imDest->getMatrix() == nullptr || imSrc->getMatrix() == nullptr)
-        throw std::invalid_argument("ImageMatrix is not initialized");
+        throw ustr_error(ustr("ImageMatrix is not initialized"));
     if (imDest->getMatrix() == imSrc->getMatrix())
-        throw std::invalid_argument("Source and destination cannot be the same");
+        throw ustr_error(ustr("Source and destination cannot be the same"));
 
     int yRange, yStart;
     if (yDest < 0) {
@@ -243,9 +237,9 @@ void PiCanvas::blend(pImageMatrix imDest, const pImageMatrix imSrc,
     int xSrc, int ySrc, int srcWidth, int srcHeight, uint8_t opacity)
 {
     if (imDest->getMatrix() == nullptr || imSrc->getMatrix() == nullptr)
-        throw std::invalid_argument("ImageMatrix is not initialized");
+        throw ustr_error(ustr("ImageMatrix is not initialized"));
     if (imDest->getMatrix() == imSrc->getMatrix())
-        throw std::invalid_argument("Source and destination cannot be the same");
+        throw ustr_error(ustr("Source and destination cannot be the same"));
 
     if (ySrc + srcHeight > imSrc->getHeight() || xSrc + srcWidth > imSrc->getWidth())
         return;

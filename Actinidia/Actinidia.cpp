@@ -18,44 +18,24 @@
     #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls'"\
     " version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
     #endif
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     #include <gtk/gtk.h>
+#else
+#error unsupported platform
 #endif
-#include <string>
-#include <sstream>
-#include <filesystem>
 #include <map>
+#include <filesystem>
 
-#include "../Tools/Common/Window.h"
 #include "../Tools/Common/ResourcePack.h"
 #include "../Tools/Common/Timer.h"
 #include "resource.h"
-
-// callbacks
-bool LuaInit();
-void OnClean();
-void OnSetFocus();
-void OnKillFocus();
-void OnPaint(const GdiCanvas& gdi);
-void OnClose();
-void OnKeyDown(int key);
-void OnKeyUp(int key);
-void OnLButtonDown(uint32_t, int x, int y);
-void OnLButtonUp(uint32_t, int x, int y);
-void OnMouseMove(uint32_t, int x, int y);
-void OnMouseWheel(uint32_t, short zDelta, int x, int y);
+#include "Actinidia.h"
 
 // In Direct mode, the name of resource folder must be "game"
 bool bDirectMode;
 pResourcePack pack;
-// user data
-#ifdef _WIN32
-std::wstring user_data_path;
-#endif /* _WIN32 */
-#ifdef _GTK
-std::string user_data_path;
-#endif /* _GTK */
+const string_t USER_DATA_PATH = ustr("game.data");
+// Use UTF-8 encoding
 std::map<const std::string, std::string> user_data;
 // save reference to ImageMatrix handles
 std::map<size_t, pImageMatrix> im_handles;
@@ -63,8 +43,6 @@ std::map<size_t, pImageMatrix> im_handles;
 Window w;
 size_t window_width = 1024;
 size_t window_height = 768;
-const int MIN_WIDTH = 200;
-const int MIN_HEIGHT = 100;
 Timer* timer;
 
 #ifdef _WIN32
@@ -74,30 +52,31 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
-    // resource file or resource folder
-    std::wstring game_res = L"game.res";
+    // Resource file or resource folder
+    string_t game_res = ustr("game.res");
     if (*lpCmdLine == '\0')
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
 int main(int argc, char** argv)
 {
     char *lpCmdLine = argv[1];
-    // resource file or resource folder
-    std::string game_res = "game.res";
+    // Resource file or resource folder
+    string_t game_res = ustr("game.res");
     if (argc == 1)
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
     {
-        // no resource file specified, use default
+        // No resource file specified, use default
         try {
             pack = ResourcePack::parsePack(game_res);
             bDirectMode = false;
         }
-        catch (std::runtime_error&) {
-            // no default resource file found, try direct mode
+        catch (ustr_error& e) {
+            // No default resource file found, try direct mode
             if (std::filesystem::exists("game") && std::filesystem::is_directory("game"))
                 bDirectMode = true;
             else {
-                w.alert("Failed to load default resource file \"game.res\"", "Error", Window::ERROR);
+                w.alert(ustr("Failed to load default resource file \"game.res\": ") + e.what(), ustr("Error"), Window::ERROR);
                 return 1;
             }
         }
@@ -108,46 +87,25 @@ int main(int argc, char** argv)
         if (!std::filesystem::exists(path)) {
             return 1;
         }
-        // use specified resource file
-        if (path.extension() == L".res")
-        {
-            try {
-                pack = ResourcePack::parsePack(path);
-                bDirectMode = false;
-                game_res = path.filename();
-            }
-            catch (std::runtime_error&) {
-                w.alert("Failed to load the resource file", "Error", Window::ERROR);
-                return 1;
-            }
+        // Use specified resource file
+        try {
+            pack = ResourcePack::parsePack(path.to_ustr());
+            bDirectMode = false;
+            game_res = path.filename().to_ustr();
         }
-        else {
-            w.alert("Invalid resource file", "Error", Window::ERROR);
+        catch (ustr_error& e) {
+            w.alert(ustr("Failed to load the resource file ") + e.what(), ustr("Error"), Window::ERROR);
             return 1;
         }
     }
 
-#ifdef _WIN32
-    // load user data
-    if (bDirectMode)
-        user_data_path = L"game.data";
-    else
-        user_data_path = L".data";
-#endif /* _WIN32 */
-#ifdef _GTK
-    // load user data
-    if (bDirectMode)
-        user_data_path = "game.data";
-    else
-        user_data_path = ".data";
-#endif /* _GTK */
-
-    std::ifstream in(user_data_path);
+    // Load user data
+    std::ifstream in(USER_DATA_PATH);
     char buff[1024];
     if (in.good()) {
         while (in.getline(buff, 1024)) {
-            if (buff[0] == '#') continue;			// # this is comment
-            const char* pos = strchr(buff, '=');	// eg. best = 999
+            if (buff[0] == '#') continue;           // # this is comment
+            const char* pos = strchr(buff, '=');    // eg. best = 999
             if (pos != NULL) {
                 std::string key(buff, pos - buff);
                 user_data[key] = std::string(pos + 1);
@@ -171,7 +129,7 @@ int main(int argc, char** argv)
         OnClose();
 
         // save user data
-        std::ofstream out(user_data_path);
+        std::ofstream out(USER_DATA_PATH);
         for (auto& p : user_data) {
             out << p.first.c_str() << '=' << p.second.c_str() << '\n';
         }
@@ -180,7 +138,7 @@ int main(int argc, char** argv)
         OnClean();
         return true;
     });
-    
+
     // Initialize Lua environment and run script
     if (LuaInit())
     {
@@ -197,8 +155,7 @@ int main(int argc, char** argv)
             NULL,
             LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP))
         );
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
         w.create(
             game_res,
             window_width,
@@ -206,7 +163,9 @@ int main(int argc, char** argv)
             MIN_WIDTH, // min width
             MIN_HEIGHT  // min height
         );
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
         timer = new Timer();
         timer->begin(17ms, [] {
             w.refresh();

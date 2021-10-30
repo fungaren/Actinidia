@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2020, FANG All rights reserved.
+ * Copyright (c) 2021, FANG All rights reserved.
  */
+#pragma once
 #include "Canvas.h"
 /**
  * @class GdiCanvas
@@ -13,11 +14,12 @@ private:
 #ifdef _WIN32
     HWND hwnd;
     HDC hdc;
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     cairo_t *cr;
     GtkWindow *wnd;
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
 
 public:
 
@@ -33,14 +35,16 @@ public:
     ~GdiCanvas() {
         ReleaseDC(hwnd, hdc);
     }
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     GdiCanvas(GtkWindow *wnd, cairo_t *cr)
         :cr(cr), wnd(wnd)
     { }
 
     ~GdiCanvas() {}
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
+
     GdiCanvas(GdiCanvas&) = delete;
 
     /**
@@ -54,25 +58,25 @@ public:
 
     //const unsigned int format = DT_NOPREFIX | DT_WORDBREAK | DT_EDITCONTROL | DT_NOCLIP | DT_HIDEPREFIX;
     //// calc expected height for specific text width
-    //int calcHeight(const std::wstring& str, int width)
+    //int calcHeight(const string_t& str, int width)
     //{
     //  RECT rc = { 0,0,width,0 };
-    //  DrawTextW(hdc, str.c_str(), str.length(), &rc, format | DT_CALCRECT);
+    //  DrawText(hdc, str.c_str(), str.length(), &rc, format | DT_CALCRECT);
     //  return rc.bottom - rc.top;
     //}
 
-    //Font& drawText(const std::wstring& str, int left, int top, int width, int height) {
+    //Font& drawText(const string_t& str, int left, int top, int width, int height) {
     //  RECT rc = { left, top, left + width, top + height };
 
     //  SetBkMode(hdc, TRANSPARENT);
     //  SetTextColor(hdc, color);
 
-    //  DrawTextW(hdc, str.c_str(), str.length(), &rc, format);
+    //  DrawText(hdc, str.c_str(), str.length(), &rc, format);
     //  return *this;
     //}
 
-    bool printText(int x, int y, std::wstring str, uint16_t len,
-        std::wstring fontName, uint8_t fontSize, color fontColor = Constant::black, 
+    bool printText(int x, int y, const string_t& str, uint16_t len,
+        const string_t& fontName, uint8_t fontSize, color fontColor = Constant::black,
         CharStyle style = Constant::style_default) const;
 
     /**

@@ -13,56 +13,43 @@
         #pragma comment(lib, "zlib/zlib.lib")
         #pragma comment(lib, "libjpeg/jpeg.lib")
     #endif
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
+    #include <iostream>
+#else
+#error unsupported platform
+#endif
 
-#endif /* _GTK */
-#include <cstring>
 #include "ImageMatrix.h"
 
 pImageMatrix ImageMatrixFactory::createBufferImage(uint16_t width, uint16_t height, uint32_t bkgrdColor)
 {
     if (width == 0 || height == 0)
-        throw std::invalid_argument("width and height cannot be zero");
+        throw ustr_error(ustr("Width and height cannot be zero"));
 
     // Allocate memory space for image matrix
     uint32_t *table;
     try {
         table = new uint32_t[(size_t)width * height];
     }
-    catch (std::bad_alloc &) {
-        throw std::runtime_error("Cannot allocate memory");
+    catch (std::bad_alloc&) {
+        throw ustr_error(ustr("Cannot allocate memory"));
     }
     for (size_t i = 0; i < (size_t)width * height; i++)
         table[i] = bkgrdColor;
     return std::shared_ptr<ImageMatrix>(new ImageMatrix(table, width, height));
 }
 
-pImageMatrix ImageMatrixFactory::fromPngFile(const char* pngFile)
+pImageMatrix ImageMatrixFactory::fromPngFile(const string_t& pngFile)
 {
-    FILE *fp = openfile(pngFile, "rb");
+    FILE *fp = openfile(pngFile, ustr("rb"));
     try {
         pImageMatrix im = fromPngFile(fp);
         fclose(fp);
         return im;
     }
-    catch (std::runtime_error &e) {
+    catch (...) {
         fclose(fp);
-        throw e;
-    }
-}
-
-pImageMatrix ImageMatrixFactory::fromPngFile(const wchar_t* pngFile)
-{
-    FILE *fp = openfile(pngFile, L"rb");
-    try {
-        pImageMatrix im = fromPngFile(fp);
-        fclose(fp);
-        return im;
-    }
-    catch (std::runtime_error &e) {
-        fclose(fp);
-        throw e;
+        throw;
     }
 }
 
@@ -74,18 +61,18 @@ pImageMatrix ImageMatrixFactory::fromPngFile(FILE *fp)
     // Error capture
     if (setjmp(png_jmpbuf(png_ptr))) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Failed to load image");
+        throw ustr_error(ustr("Failed to load image"));
     }
 
     // Check if the PNG image is valid
     char buf[8];
     if (fread(buf, 1, 8, fp) < 8) { // read PNG sign
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Failed to read file");
+        throw ustr_error(ustr("Failed to read file"));
     }
     if (png_sig_cmp((png_bytep)buf, (png_size_t)0, 8) != 0) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Invalid PNG image");
+        throw ustr_error(ustr("Invalid PNG image"));
     }
 
     png_init_io(png_ptr, fp);
@@ -102,17 +89,17 @@ pImageMatrix ImageMatrixFactory::fromPngBuffer(mem_image* mp)
     // Error capture
     if (setjmp(png_jmpbuf(png_ptr))) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Failed to load image");
+        throw ustr_error(ustr("Failed to load image"));
     }
 
     // Check if the PNG image is valid
     if (mp->size < 8) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Failed to read file");
+        throw ustr_error(ustr("Failed to read file"));
     }
     if (png_sig_cmp((png_bytep)mp->addr, (png_size_t)0, 8) != 0) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Invalid PNG image");
+        throw ustr_error(ustr("Invalid PNG image"));
     }
 
     png_set_read_fn(png_ptr, mp, png_read_data_fn);
@@ -126,11 +113,11 @@ pImageMatrix ImageMatrixFactory::fromPngResource(UINT nResID, LPCTSTR lpType, HM
 {
     HRSRC hRsrc = FindResource(hModule, MAKEINTRESOURCE(nResID), lpType);
     if (hRsrc == NULL)
-        throw std::runtime_error("Failed to find resource");
+        throw ustr_error(ustr("Failed to find resource"));
 
     HGLOBAL hImgData = LoadResource(hModule, hRsrc);
     if (hImgData == NULL)
-        throw std::runtime_error("Failed to load resource");
+        throw ustr_error(ustr("Failed to load resource"));
 
     LPVOID lpVoid = LockResource(hImgData);
     DWORD dwSize = SizeofResource(hModule, hRsrc);
@@ -142,26 +129,27 @@ pImageMatrix ImageMatrixFactory::fromPngResource(UINT nResID, LPCTSTR lpType, HM
         FreeResource(hImgData);
         return im;
     }
-    catch (std::runtime_error &e) {
+    catch (...) {
         UnlockResource(hImgData);
         FreeResource(hImgData);
-        throw e;
+        throw;
     }
 }
-#endif /* _WIN32 */
-#ifdef _GTK
-
-#endif /* _GTK */
+#elif defined _GTK
+#else
+#error unsupported platform
+#endif
 
 void ImageMatrixFactory::png_read_data_fn(png_structp png_ptr, png_bytep dest, png_size_t length)
 {
     mem_image* mp = (mem_image*)png_get_io_ptr(png_ptr);
-    #ifdef _WIN32
+#ifdef _WIN32
     memcpy_s(dest, length, (uint8_t*)mp->addr + mp->has_read, length);
-    #endif /* _WIN32 */
-    #ifdef _GTK
+#elif defined _GTK
     memcpy(dest, (uint8_t*)mp->addr + mp->has_read, length);
-    #endif /* _GTK */
+#else
+#error unsupported platform
+#endif
     mp->has_read += length;
 }
 
@@ -174,7 +162,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     uint32_t h = png_get_image_height(png_ptr, info_ptr);
     if (w >= UINT16_MAX || h >= UINT16_MAX) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Image size is too large");
+        throw ustr_error(ustr("Image size is too large"));
     }
 
     // allocate memory space for image matrix
@@ -184,7 +172,7 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
     }
     catch (std::bad_alloc&) {
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Cannot allocate memory");
+        throw ustr_error(ustr("Cannot allocate memory"));
     }
 
     png_bytep* row_pointers = png_get_rows(png_ptr, info_ptr);
@@ -218,36 +206,23 @@ pImageMatrix ImageMatrixFactory::readPngImpl(png_structp png_ptr, png_infop info
         break;
     default:
         png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-        throw std::runtime_error("Unkown color type");
+        throw ustr_error(ustr("Unknown color type"));
     }
     png_destroy_read_struct(&png_ptr, &info_ptr, 0);
 
     return std::shared_ptr<ImageMatrix>(new ImageMatrix(table, w, h));
 }
 
-void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const char* filePath)
+void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const string_t& filePath)
 {
-    FILE *fp = openfile(filePath, "wb");
+    FILE *fp = openfile(filePath, ustr("wb"));
     try {
         dumpPngFile(im, fp);
         fclose(fp);
     }
-    catch (std::runtime_error &e) {
+    catch (...) {
         fclose(fp);
-        throw e;
-    }
-}
-
-void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, const wchar_t* filePath)
-{
-    FILE *fp = openfile(filePath, L"wb");
-    try {
-        dumpPngFile(im, fp);
-        fclose(fp);
-    }
-    catch (std::runtime_error &e) {
-        fclose(fp);
-        throw e;
+        throw;
     }
 }
 
@@ -265,13 +240,13 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, FILE *fp)
      */
     png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
     if (png_ptr == NULL)
-        throw std::runtime_error("Failed to create write struct");
+        throw ustr_error(ustr("Failed to create write struct"));
 
     /* Allocate/initialize the image information data.  REQUIRED. */
     info_ptr = png_create_info_struct(png_ptr);
     if (info_ptr == NULL) {
         png_destroy_write_struct(&png_ptr, NULL);
-        throw std::runtime_error("Failed to create info struct");
+        throw ustr_error(ustr("Failed to create info struct"));
     }
 
     /* Set up error handling.  REQUIRED if you aren't supplying your own
@@ -280,7 +255,7 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, FILE *fp)
     if (setjmp(png_jmpbuf(png_ptr))) {
         /* If we get here, we had a problem writing the file. */
         png_destroy_write_struct(&png_ptr, &info_ptr);
-        throw std::runtime_error("Failed to write png file");
+        throw ustr_error(ustr("Failed to write png file"));
     }
 
     /* One of the following I/O initialization functions is REQUIRED. */
@@ -360,39 +335,18 @@ void ImageMatrixFactory::dumpPngFile(const pImageMatrix im, FILE *fp)
     png_destroy_write_struct(&png_ptr, &info_ptr);
 }
 
-pImageMatrix ImageMatrixFactory::fromJpegFile(const char* jpegFile)
+pImageMatrix ImageMatrixFactory::fromJpegFile(const string_t& jpegFile)
 {
-    FILE *fp = openfile(jpegFile, "rb");
+    FILE *fp = openfile(jpegFile, ustr("rb"));
     try {
         pImageMatrix im = fromJpegFile(fp);
         fclose(fp);
         return im;
     }
-    catch (std::runtime_error &e) {
+    catch (...) {
         fclose(fp);
-        throw e;
+        throw;
     }
-}
-
-
-pImageMatrix ImageMatrixFactory::fromJpegFile(const wchar_t* jpegFile)
-{
-    FILE *fp = openfile(jpegFile, L"rb");
-    try {
-        pImageMatrix im = fromJpegFile(fp);
-        fclose(fp);
-        return im;
-    }
-    catch (std::runtime_error &e) {
-        fclose(fp);
-        throw e;
-    }
-}
-
-inline void _trace(std::wstring str) {
-#if (defined _WIN32) && (defined _DEBUG)
-    OutputDebugStringW((str + L'\n').c_str());
-#endif
 }
 
 void ImageMatrixFactory::jpeg_error_exit(j_common_ptr cinfo) {
@@ -400,7 +354,6 @@ void ImageMatrixFactory::jpeg_error_exit(j_common_ptr cinfo) {
     (*cinfo->err->output_message)(cinfo);
     longjmp(myerr->setjmp_buffer, 1);
 }
-
 
 pImageMatrix ImageMatrixFactory::fromJpegFile(FILE *fp)
 {
@@ -419,7 +372,7 @@ pImageMatrix ImageMatrixFactory::fromJpegFile(FILE *fp)
         (cinfo.err->format_message) ((j_common_ptr)&cinfo, buffer);
 
         jpeg_destroy_decompress(&cinfo);
-        throw std::runtime_error(buffer);
+        throw ustr_error(fromUTF8(buffer));
     }
 
     /* Now we can initialize the JPEG decompression object. */
@@ -435,7 +388,7 @@ pImageMatrix ImageMatrixFactory::fromJpegBuffer(mem_image *mp)
 {
     jpeg_decompress_struct cinfo;
     _jpeg_error_mgr jerr;
-    
+
     /* Step 1: allocate and initialize JPEG decompression object */
     cinfo.err = jpeg_std_error(&jerr.pub);
 
@@ -448,7 +401,7 @@ pImageMatrix ImageMatrixFactory::fromJpegBuffer(mem_image *mp)
         (cinfo.err->format_message) ((j_common_ptr)&cinfo, buffer);
 
         jpeg_destroy_decompress(&cinfo);
-        throw std::runtime_error(buffer);
+        throw ustr_error(fromUTF8(buffer));
     }
     /* Now we can initialize the JPEG decompression object. */
     jpeg_create_decompress(&cinfo);
@@ -465,11 +418,11 @@ pImageMatrix ImageMatrixFactory::fromJpegResource(UINT nResID, LPCTSTR lpType, H
 {
     HRSRC hRsrc = FindResource(hModule, MAKEINTRESOURCE(nResID), L"lpType");
     if (hRsrc == NULL)
-        throw std::runtime_error("Failed to find resource");
+        throw ustr_error(ustr("Failed to find resource"));
 
     HGLOBAL hImgData = LoadResource(hModule, hRsrc);
     if (hImgData == NULL)
-        throw std::runtime_error("Failed to load resource");
+        throw ustr_error(ustr("Failed to load resource"));
 
     LPVOID lpVoid = LockResource(hImgData);
     DWORD dwSize = SizeofResource(hModule, hRsrc);
@@ -481,16 +434,16 @@ pImageMatrix ImageMatrixFactory::fromJpegResource(UINT nResID, LPCTSTR lpType, H
         FreeResource(hImgData);
         return im;
     }
-    catch (std::runtime_error &e) {
+    catch (...) {
         UnlockResource(hImgData);
         FreeResource(hImgData);
-        throw e;
+        throw;
     }
 }
-#endif /* _WIN32 */
-#ifdef _GTK
-
-#endif /* _GTK */
+#elif defined _GTK
+#else
+#error unsupported platform
+#endif
 
 pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jpeg_error_mgr& jerr)
 {
@@ -512,7 +465,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     // We only support RGB color now
     if (cinfo.output_components != 3) {
         jpeg_destroy_decompress(&cinfo);
-        throw std::runtime_error("Unkown color type");
+        throw ustr_error(ustr("Unknown color type"));
     }
 
     /* We may need to do some setup of our own at this point before reading
@@ -526,7 +479,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
 
     if (cinfo.output_width >= UINT16_MAX || cinfo.output_height >= UINT16_MAX) {
         jpeg_destroy_decompress(&cinfo);
-        throw std::runtime_error("Image size is too large");
+        throw ustr_error(ustr("Image size is too large"));
     }
     uint16_t w = cinfo.output_width;
     uint16_t h = cinfo.output_height;
@@ -542,7 +495,7 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     }
     catch (std::bad_alloc&) {
         jpeg_destroy_decompress(&cinfo);
-        throw std::runtime_error("Cannot allocate memory");
+        throw ustr_error(ustr("Cannot allocate memory"));
     }
 
     /* Step 6: while (scan lines remain to be read) */
@@ -592,33 +545,18 @@ pImageMatrix ImageMatrixFactory::readJpegImpl(jpeg_decompress_struct& cinfo, _jp
     return std::shared_ptr<ImageMatrix>(new ImageMatrix(table, w, h));
 }
 
-void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const char* filePath, uint8_t quality)
+void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const string_t& filePath, uint8_t quality)
 {
     if (quality > 100)
-        throw std::invalid_argument("Quality range [1,100]");
-    FILE *fp = openfile(filePath, "wb");
+        throw ustr_error(ustr("Quality range [1,100]"));
+    FILE *fp = openfile(filePath, ustr("wb"));
     try {
         dumpJpegFile(im, fp, quality);
         fclose(fp);
     }
-    catch (std::runtime_error &e) {
+    catch (...) {
         fclose(fp);
-        throw e;
-    }
-}
-
-void ImageMatrixFactory::dumpJpegFile(const pImageMatrix im, const wchar_t* filePath, uint8_t quality)
-{
-    if (quality > 100)
-        throw std::invalid_argument("Quality range [1,100]");
-    FILE *fp = openfile(filePath, L"wb");
-    try {
-        dumpJpegFile(im, fp, quality);
-        fclose(fp);
-    }
-    catch (std::runtime_error &e) {
-        fclose(fp);
-        throw e;
+        throw;
     }
 }
 

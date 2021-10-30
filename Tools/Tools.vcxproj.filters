@@ -27,6 +27,36 @@
     <ClInclude Include="Snake\Snake.h">
       <Filter>Snake</Filter>
     </ClInclude>
+    <ClInclude Include="Common\Canvas.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Compress.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\GdiCanvas.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\ImageMatrix.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Keycodes.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\PiCanvas.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\ResourcePack.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Timer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Window.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Base.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Tools.cpp">
@@ -51,6 +81,9 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="Common\PiCanvas.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Base.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>

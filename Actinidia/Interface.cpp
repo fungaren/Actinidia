@@ -10,37 +10,31 @@
     #pragma comment(lib, "bass/bass.lib")
 
     #include "lua/lua.hpp"
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     #include <gtk/gtk.h>
     #include <lua5.3/lua.hpp>
     #include <iostream>
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
 
-#include <string>
-#include <filesystem>
 #include <ctime>
-#include <iomanip>
-#include <sstream>
-#include <fstream>
+#include <filesystem>
 #include <map>
-#include "../Tools/Common/Window.h"
-#include "../Tools/Common/Canvas.h"
-#include "../Tools/Common/ImageMatrix.h"
-#include "../Tools/Common/ResourcePack.h"
+
 #include "bass/bass.h"
+#include "../Tools/Common/ResourcePack.h"
+#include "Actinidia.h"
 
 lua_State* L = nullptr;
 extern pResourcePack pack;
 extern Window w;
 extern bool bDirectMode;
+// Use UTF-8 encoding
 extern std::map<const std::string, std::string> user_data;
 extern std::map<size_t, pImageMatrix> im_handles;
 
 extern size_t window_width, window_height;
-extern const int MIN_WIDTH = 200;
-extern const int MIN_HEIGHT = 100;
-
 
 //==============================================
 //=        Global functions for lua            =
@@ -59,8 +53,8 @@ int CreateImage(lua_State *L)
         auto key = std::hash<pImageMatrix>{}(g);
         lua_pushinteger(L, (lua_Integer)key);
         im_handles.insert({ key, g });
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "ERROR", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 1;
 }
@@ -79,8 +73,8 @@ int CreateImageEx(lua_State *L)
         auto key = std::hash<pImageMatrix>{}(g);
         lua_pushinteger(L, (lua_Integer)key);
         im_handles.insert({ key, g });
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "ERROR", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 1;
 }
@@ -98,8 +92,8 @@ int CreateTransImage(lua_State *L)
         auto key = std::hash<pImageMatrix>{}(g);
         lua_pushinteger(L, (lua_Integer)key);
         im_handles.insert({ key, g });
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "ERROR", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 1;
 }
@@ -142,12 +136,12 @@ int GetText(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 1) return 0;
-    std::string f = lua_tostring(L, 1);
+    string_t f = fromUTF8(std::string(lua_tostring(L, 1)));
     lua_pop(L, 1);
     char* buffer;
     uint32_t size;
     if (bDirectMode) {
-        std::ifstream in("./game/" + f, std::ios::binary);
+        std::ifstream in(ustr("./game/") + f, std::ios::binary);
         if (in.good()) {
             in.seekg(0, std::ios::end);
             size = (uint32_t)in.tellg();
@@ -161,7 +155,7 @@ int GetText(lua_State *L)
     }
     else
     {
-        if (pack->readResource("./game/" + f, &buffer, &size))
+        if (pack->readResource(ustr("./game/") + f, &buffer, &size))
         {
             lua_pushlstring(L, buffer, size);
             return 1;
@@ -176,30 +170,30 @@ int GetImage(lua_State *L)
 {
     int n = lua_gettop(L);
     if (n != 1) return 0;
-    std::string f = lua_tostring(L, 1);
+    string_t f = fromUTF8(std::string(lua_tostring(L, 1)));
     lua_pop(L, 1);
     char* buffer;
     uint32_t size;
     if (bDirectMode) {
         try {
-            pImageMatrix g = ImageMatrixFactory::openImage(("./game/" + f).c_str());
+            pImageMatrix g = ImageMatrixFactory::fromImageFile(ustr("./game/") + f);
             auto key = std::hash<pImageMatrix>{}(g);
             lua_pushinteger(L, (lua_Integer)key);
             im_handles.insert({ key, g });
             return 1;
         }
-        catch (std::runtime_error& e) {
-            w.alert(e.what(), "ERROR", Window::ERROR);
+        catch (ustr_error& e) {
+            w.alert(e.what(), ustr("Error"), Window::ERROR);
         }
     }
     else
     {
-        if (pack->readResource("./game/" + f, &buffer, &size))
+        if (pack->readResource(ustr("./game/") + f, &buffer, &size))
         {
             try {
                 pImageMatrix g;
-                std::string extname = f.substr(f.size() - 3, 3);
-                if (extname == "png" || extname == "PNG")
+                string_t extname = f.substr(f.size() - 3, 3);
+                if (extname == ustr("png") || extname == ustr("PNG"))
                     g = ImageMatrixFactory::fromPngBuffer(buffer, size);
                 else
                     g = ImageMatrixFactory::fromJpegBuffer(buffer, size);
@@ -208,8 +202,8 @@ int GetImage(lua_State *L)
                 im_handles.insert({ key, g });
                 return 1;
             }
-            catch (std::runtime_error& e) {
-                w.alert(e.what(), "ERROR", Window::ERROR);
+            catch (ustr_error& e) {
+                w.alert(e.what(), ustr("Error"), Window::ERROR);
             }
         }
     }
@@ -222,13 +216,13 @@ int GetSound(lua_State* L)
 {
     int n = lua_gettop(L);
     if (n != 2) return 0;
-    std::string f = lua_tostring(L, 1);
+    string_t f = fromUTF8(std::string(lua_tostring(L, 1)));
     int b_loop = lua_toboolean(L, 2);
     lua_pop(L, 2);
     char* buffer;
     uint32_t size;
     if (bDirectMode) {
-        std::ifstream in("./game/" + f, std::ios::binary);
+        std::ifstream in(ustr("./game/") + f, std::ios::binary);
         if (in.good())
         {
             in.seekg(0, std::ios::end);
@@ -245,8 +239,7 @@ int GetSound(lua_State* L)
                 lua_pushinteger(L, sound);
                 return 1;
             }
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
             HSTREAM sound = BASS_StreamCreateFile(TRUE, buffer, 0, size,
                 b_loop ? BASS_SAMPLE_LOOP : 0);
             if (sound)
@@ -254,13 +247,15 @@ int GetSound(lua_State* L)
                 lua_pushinteger(L, sound);
                 return 1;
             }
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
         }
         in.close();
     }
     else
     {
-        if (pack->readResource("./game/" + f, &buffer, &size))
+        if (pack->readResource(ustr("./game/") + f, &buffer, &size))
         {
 #ifdef _WIN32
             HSTREAM sound = BASS_StreamCreateFile(TRUE, buffer, 0, size,
@@ -270,8 +265,7 @@ int GetSound(lua_State* L)
                 lua_pushinteger(L, sound);
                 return 1;
             }
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
             HSTREAM sound = BASS_StreamCreateFile(TRUE, buffer, 0, size,
                 b_loop ? BASS_SAMPLE_LOOP : 0);
             if (sound)
@@ -279,7 +273,9 @@ int GetSound(lua_State* L)
                 lua_pushinteger(L, sound);
                 return 1;
             }
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
         }
     }
     lua_pushnil(L);
@@ -298,8 +294,8 @@ int PasteToImage(lua_State *L)
     lua_pop(L, 4);
     try {
         PiCanvas::blend(im_handles[keyDest], im_handles[keySrc], x, y, 255);
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "ERROR", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 0;
 }
@@ -324,8 +320,8 @@ int PasteToImageEx(lua_State *L)
         PiCanvas::blend(im_handles[keyDest], im_handles[keySrc],
             xDest, yDest, DestWidth, DestHeight,
             xSrc, ySrc, SrcWidth, SrcHeight, 255);
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "Error", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 0;
 }
@@ -343,8 +339,8 @@ int AlphaBlend(lua_State *L)
     lua_pop(L, 5);
     try {
         PiCanvas::blend(im_handles[keyDest], im_handles[keySrc], xDest, yDest, Opacity);
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "Error", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 0;
 }
@@ -369,8 +365,8 @@ int AlphaBlendEx(lua_State *L)
     try {
         PiCanvas::blend(im_handles[keyDest], im_handles[keySrc], xDest, yDest, DestWidth, DestHeight,
             xSrc, ySrc, SrcWidth, SrcHeight, Opacity);
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "Error", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 0;
 }
@@ -385,8 +381,8 @@ int PasteToWnd(lua_State *L)
     lua_pop(L, 2);
     try {
         wnd->paste(im_handles[key], 0, 0);
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "Error", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 0;
 }
@@ -410,8 +406,8 @@ int PasteToWndEx(lua_State *L)
     try {
         wnd->paste(im_handles[key], xDest, yDest, DestWidth, DestHeight,
             xSrc, ySrc, SrcWidth, SrcHeight);
-    } catch (std::runtime_error& e) {
-        w.alert(e.what(), "Error", Window::ERROR);
+    } catch (ustr_error& e) {
+        w.alert(e.what(), ustr("Error"), Window::ERROR);
     }
     return 0;
 }
@@ -426,13 +422,14 @@ int StopSound(lua_State *L)
     lua_pop(L, 1);
     if (BASS_ACTIVE_PLAYING == BASS_ChannelIsActive(sound))
         BASS_ChannelStop(sound);
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
     lua_pop(L, 1);
     if (BASS_ACTIVE_PLAYING == BASS_ChannelIsActive(sound))
         BASS_ChannelStop(sound);
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
     return 0;
 }
 
@@ -446,13 +443,14 @@ int SetVolume(lua_State *L)
     float volume = (float)lua_tonumber(L, 2);
     lua_pop(L, 2);
     BASS_ChannelSetAttribute(sound, BASS_ATTRIB_VOL, volume);
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
     float volume = (float)lua_tonumber(L, 2);
     lua_pop(L, 2);
     BASS_ChannelSetAttribute(sound, BASS_ATTRIB_VOL, volume);
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
     return 0;
 }
 
@@ -465,12 +463,13 @@ int PlaySound(lua_State *L)
     HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
     lua_pop(L, 1);
     BASS_ChannelPlay(sound, true);
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     HSTREAM sound = (HSTREAM)lua_tointeger(L, 1);
     lua_pop(L, 1);
     BASS_ChannelPlay(sound, true);
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
     return 0;
 }
 
@@ -481,24 +480,24 @@ int Screenshot(lua_State *L)
     std::filesystem::create_directory("screenshot");
     std::time_t now = std::time(nullptr);
 
+    stringstream_t ss;
 #ifdef _WIN32
     struct tm t;
     localtime_s(&t, &now);
-    auto&& time = std::put_time(&t, L"%Y-%m-%d-%H-%M-%S");
-    std::wstringstream ss;
-    ss << L"screenshot\\" << time << L'_' << n_png++ << ".png";
-#endif /* _WIN32 */
-#ifdef _GTK
+    auto&& time = std::put_time(&t, ustr("%Y-%m-%d-%H-%M-%S"));
+    ss << ustr("screenshot\\") << time << ustr('_') << n_png++ << ustr(".png");
+#elif defined _GTK
     auto&& time = std::put_time(std::localtime(&now), "%Y-%m-%d-%H-%M-%S");
-    std::stringstream ss;
     ss << "screenshot/" << time << '_' << n_png++ << ".png";
-    std::cout << "screenshot saved: " << ss.str() << '\n'; 
-#endif /* _GTK */
+    std::cout << "screenshot saved: " << ss.str() << '\n';
+#else
+#error unsupported platform
+#endif
 
     pImageMatrix im = w.getWindowImage();
     if (im)
     {
-        ImageMatrixFactory::dumpPngFile(im, ss.str().c_str());
+        ImageMatrixFactory::dumpPngFile(im, ss.str());
         lua_pushboolean(L, true);
     }
     else
@@ -543,10 +542,11 @@ bool LuaInit()
 {
 #ifdef _WIN32
     BASS_Init(-1, 44100, 0, 0, 0);
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     BASS_Init(-1, 44100, 0, 0, 0);
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
 
     L = luaL_newstate();
     luaL_openlibs(L);
@@ -578,10 +578,10 @@ bool LuaInit()
     char* buffer = nullptr;
     uint32_t size;
     std::ifstream in;
-    if (!bDirectMode && pack->readResource("./game/config.ini", &buffer, &size))
+    if (!bDirectMode && pack->readResource(ustr("./game/config.ini"), &buffer, &size))
         ok = true;
     if (bDirectMode) {
-        in.open("./game/config.ini", std::ios::binary);
+        in.open(ustr("./game/config.ini"), std::ios::binary);
         if (in.good())
         {
             in.seekg(0, std::ios::end);
@@ -617,10 +617,10 @@ bool LuaInit()
     }
     ok = false;
     buffer = nullptr;
-    if (!bDirectMode && pack->readResource("./game/lua/main.lua", &buffer, &size))
+    if (!bDirectMode && pack->readResource(ustr("./game/lua/main.lua"), &buffer, &size))
         ok = true;
     if (bDirectMode) {
-        in.open("./game/lua/main.lua", std::ios::binary);
+        in.open(ustr("./game/lua/main.lua"), std::ios::binary);
         if (in.good())
         {
             in.seekg(0, std::ios::end);
@@ -651,7 +651,7 @@ bool LuaInit()
     }
     else
     {
-        w.alert("Fail to load main script!", "Error", Window::ERROR);
+        w.alert(ustr("Fail to load main script!"), ustr("Error"), Window::ERROR);
         return false;
     }
 }
@@ -660,10 +660,11 @@ void OnClean()
 {
 #ifdef _WIN32
     BASS_Free();
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
     BASS_Free();
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
     lua_close(L);
     L = nullptr;
 }

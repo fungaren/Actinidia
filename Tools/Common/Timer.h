@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2021, FANG All rights reserved.
+ */
 #pragma once
 #include <thread>
 #include <chrono>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, FANG All rights reserved.
+ * Copyright (c) 2021, FANG All rights reserved.
  */
 #pragma once
 #include "Canvas.h"
@@ -21,10 +21,10 @@ public:
 
     /**
      * @param im ImageMatrix handle.
-     * @param left 
-     * @param top 
-     * @param right 
-     * @param bottom 
+     * @param left
+     * @param top
+     * @param right
+     * @param bottom
      * @param fillColor Fill the rectangle with the color.
      */
     static void fillSolidRect(pImageMatrix im, int left, int top, int right, int bottom, color fillColor);
@@ -37,11 +37,11 @@ public:
      * @param len The length of text that need to draw.
      * @param fontName The font name used to draw text.
      * @param fontColor Draw text with the color.
-     * @param style The text style (@ref style_default, @ref style_bold, 
+     * @param style The text style (@ref style_default, @ref style_bold,
      *        @ref style_itatic, @ref style_underline).
      */
-    static void printText(pImageMatrix im, int x, int y, std::wstring str, uint16_t len,
-        std::wstring fontName, uint8_t fontSize, color fontColor = Constant::black,
+    static void printText(pImageMatrix im, int x, int y, const string_t& str, uint16_t len,
+        const string_t& fontName, uint8_t fontSize, color fontColor = Constant::black,
         CharStyle style = Constant::style_default) {
         return;
     }
@@ -60,10 +60,10 @@ public:
 
     /**
      * @param im ImageMatrix handle.
-     * @param left 
-     * @param top 
-     * @param right 
-     * @param bottom 
+     * @param left
+     * @param top
+     * @param right
+     * @param bottom
      * @param ls The line style of the rectangle. Default is @ref solid.
      * @param lineColor Use the color to draw rectangle. Default is black.
      */

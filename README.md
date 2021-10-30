@@ -38,9 +38,9 @@ This program support both Windows and Linux. Only support x64 systems.
 
 Visual Studio 2019 is required.
 
-### Linux 
+### Linux
 
-g++-8 is required to support C++17 filesystem:
+g++-8 or higher is required to support C++17 filesystem:
 
 ```bash
 sudo apt-get install g++-8 cmake
@@ -60,7 +60,9 @@ Clone this repository and build:
 ```bash
 git clone https://github.com/mooction/actinidia
 cd actinidia/Actinidia
-cmake .
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 sudo make install
 ```

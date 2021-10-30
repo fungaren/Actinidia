@@ -3,8 +3,9 @@
  */
 #include <windows.h>
 #undef max
-#include <sstream>
+
 #include "resource.h"
+
 #include "Common/Window.h"
 #include "Common/Canvas.h"
 #include "Common/Timer.h"
@@ -89,15 +90,15 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
         }
         gdi.paste(img, 0, 0);
         // 结束游戏
-        std::wostringstream buf;
-        buf << GAMEOVER << SCORE << GamePoint();
-        gdi.printText(150, 100, buf.str(), 12, TEXTFONT, TEXTSIZE, FONTCOLOR);
+        stringstream_t buf;
+        buf << GAMEOVER << ' ' << SCORE << GamePoint();
+        gdi.printText(150, 100, buf.str(), (uint16_t)buf.str().size(), TEXTFONT, TEXTSIZE, FONTCOLOR);
         break;
     }
     case State::Pause:
         gdi.paste(img, 0, 0);
         // 显示暂停文字
-        gdi.printText(150, 100, GAMEPAUSE, 4, TEXTFONT, TEXTSIZE, FONTCOLOR);
+        gdi.printText(150, 100, GAMEPAUSE, lstrlen(GAMEPAUSE), TEXTFONT, TEXTSIZE, FONTCOLOR);
         break;
     }
 }
@@ -105,12 +106,14 @@ void SnakeView::OnDraw(const GdiCanvas& gdi)
 // 计算EdgeWidth
 void SnakeView::CountEdgeWidth(const std::pair<int, int>& size)
 {
-    if (size.first * HEI / WID <= size.second)  // 宽度小高度大
+    if (size.first * HEI / WID <= size.second)
     {
+        // 宽度小高度大
         EdgeWidth = size.first / WID - 1;
     }
-    else // 宽度大高度小
+    else
     {
+        // 宽度大高度小
         EdgeWidth = size.second / HEI - 1;
     }
 }
@@ -155,8 +158,8 @@ void SnakeView::DrawFood(pImageMatrix img)
     try {
         food = ImageMatrixFactory::fromPngResource(IDB_FOOD, L"PNG", hInst);
     }
-    catch (std::runtime_error) {
-        w.alert(IMGERROR, L"Error");     // 图片加载失败
+    catch (ustr_error& e) {
+        w.alert(string_t(ustr("Failed to load image: ")) + e.what(), L"Error");
         return;
     }
     PiCanvas::blend(img,
@@ -197,7 +200,7 @@ void SnakeView::DrawBoard(pImageMatrix img, Size& size)
 // 在标题栏显示分数
 void SnakeView::ShowPointOnTitle()
 {
-    std::wostringstream buf;
+    stringstream_t buf;
     buf << SCORE << GamePoint();
     w.setTitle(buf.str());
 }

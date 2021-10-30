@@ -1,51 +1,80 @@
 /*
- * Copyright (c) 2020, FANG All rights reserved.
+ * Copyright (c) 2021, FANG All rights reserved.
  */
 #pragma once
 #include <optional>
 #include <fstream>
-#include <sstream>
-#include <queue>
 #include <list>
 #include <functional>
+
+#include "Base.h"
+
 #ifndef _ASSERT
     #define _ASSERT(...)
 #endif /* _ASSERT */
 
-/*
-    resource package format:
-    - entity + foldername
-        - entity + filename + data
-        - entity + foldername + data
-            - entity + filename + data
-            - entity + filename + data
+const static inline uint8_t TYPE_FOLDER = 0x01;
+const static inline uint8_t TYPE_FILE = 0x00;
+const static inline char MAGIC[] = "ACTINIDIA";
+
+struct entity {
+    uint8_t type;       //!< entity type
+    uint8_t reserved;   //!< not used, maybe attribute
+    uint16_t nameSize;  //!< do not support filename length > 65535
+    //uint32_t checksum;
+    uint32_t dataSize;  //!< do not contains sizeof(entity) and name
+                        //!< do not support filesize > 4GB
+};
+
+/**
+ * @brief Resource package format:
+ *  ```
+    - entity header + folder name
+        - entity header + file name + data
+        - entity header + folder name
+            - entity header + file name + data
+            - entity header + file name + data
             ...
         ...
     ...
-
+    ```
 */
-const uint8_t TYPE_FOLDER = 0x01;
-const uint8_t TYPE_FILE = 0x00;
-const char MAGIC[] = "ACTINIDIA";
-
-struct entity {
-    uint8_t type;       // entity type
-    uint8_t reserved;   // not used, maybe attribute
-    uint16_t nameSize;  // do not support filename length > 65535
-    //uint32_t checksum;
-    uint32_t dataSize;  // do not contains sizeof(entity) and name
-                        // do not support filesize > 4GB
+struct walk_layer {
+    entity e;           /**!< Entity header */
+    std::string u8name;   /**!< Folder name or file name, UTF-8 encoded */
+    std::optional<string_t> path; /**!< Absolute file path */
 };
 
-typedef std::list<std::tuple<entity, std::string, std::optional<std::filesystem::path>>> walk_result_t;
-walk_result_t walkFolder(const std::filesystem::path& resDirectory);
-bool generatePack(const std::string& destFile,
-    const walk_result_t& queue,
-    std::function<void(size_t)> update_progress);
-bool extractPack(const std::filesystem::path& resFile);
+/**
+ * @brief Walk a directory
+ * @param dir Directory path
+ * @return A `walk_layer` list.
+ */
+std::list<walk_layer> walkFolder(const string_t& dir);
 
-/*
-    Resource file in memory:
+/**
+ * @brief Generate a resource file
+ * @param destFile Output file path
+ * @param tree A `walk_layer` list.
+ * @param update_progress A callback to update progress
+ * @return true if succeed, otherwise return false
+ */
+bool generatePack(
+    const string_t& destFile,
+    const std::list<walk_layer>& tree,
+    std::function<void(size_t)> update_progress);
+
+/**
+ * @brief Extract all files from a resource file
+ * @param resFile Resource file path
+ * @param dir Output directory
+ * @return true if succeed, otherwise return false
+ */
+bool extractPack(const string_t& resFile, const string_t& dir);
+
+/**
+ * @brief Resource file in memory:
+ * ```
     - /filename
     - /foldername/filename
     - /foldername/filename
@@ -53,18 +82,16 @@ bool extractPack(const std::filesystem::path& resFile);
     - /foldername/foldername/filename
     - /filename
     - /filename
+    ```
 */
 
 class ResourcePack {
-    // All resources are load to memory, make sure enough capcity of the memory.
     struct ResourceFile {
-        std::string path;
+        string_t path;
         uint8_t* data;
         uint32_t dataSize;
-        ResourceFile(std::string path, uint8_t* data, uint32_t dataSize) :
-            path(path),
-            data(data),
-            dataSize(dataSize)
+        ResourceFile(const string_t& path, uint8_t* data, uint32_t dataSize) :
+            path(path), data(data), dataSize(dataSize)
         {
             _ASSERT(data != nullptr);
             _ASSERT(dataSize != 0);
@@ -80,22 +107,32 @@ public:
     }
     typedef ResourcePack* pResourcePack;
 
-    // Open a package and construct a ResourcePack instance.
-    // Will throw an exception for any error occurred.
-    static pResourcePack parsePack(const std::filesystem::path& resFile) noexcept(false);
-    
-    // Read a file by path, the file pointer and file size
-    // will be stored in @p and @size. Return true if succuss.
-    // the pathname should be like "./path/to/file.jpg"
-    bool readResource(std::string pathname, uint8_t** p, uint32_t* size) const;
-    
-    // Read a file by path, the file pointer and file size
-    // will be stored in @p and @size. Return true if succuss.
-    // the pathname should be like "./path/to/file.jpg"
-    bool readResource(std::string pathname, char** p, uint32_t* size) const {
+    /**
+     * @brief Open a package and construct a ResourcePack instance.
+     * @param pathname Resource file path
+     * @return pResourcePack. Will throw an exception if any error occurred.
+     */
+    static pResourcePack parsePack(const string_t& pathname) noexcept(false);
+
+    /**
+     * @brief Read a file by path
+     * @param pathname eg. `./path/to/file.jpg`
+     * @param p file data
+     * @param size file size
+     * @return true if succuss, otherwise return false
+     */
+    bool readResource(const string_t& pathname, uint8_t** p, uint32_t* size) const;
+
+    /**
+     * @brief Read a file by path
+     * @param pathname eg. `./path/to/file.jpg`
+     * @param p file data
+     * @param size file size
+     * @return true if succuss, otherwise return false
+     */
+    bool readResource(const string_t& pathname, char** p, uint32_t* size) const {
         return readResource(pathname, (uint8_t**)p, size);
     }
-   
 };
 
 typedef ResourcePack* pResourcePack;

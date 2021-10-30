@@ -3,30 +3,30 @@
  */
 #pragma once
 
-// 方向
+// Direction
 #define TOUP     1
 #define TODOWN   2
 #define TOLEFT   3
 #define TORIGHT  4
 
-// SnakeGo 结果
+// SnakeGo Result
 #define GOFULLSCREEN 2
 #define GOSUCCESS    1
 #define GOGAMEOVER   0
 
-// 棋盘属性
+// Property of the board
 #define WID    18
 #define HEI    11
 #define FOOD   -1
 #define EMPTY  0
 
-// 游戏选项 蛇的速度（定时器Interval属性）
+// Snake speed
 #define SPEED      100
 #define DEFAULTLEN 4
 #define FOODSIZE   -3
 #define TEXTSIZE   64
 
-// 色彩
+// Color
 #define LINECOLOR       Canvas::rgb(138,187,251)
 #define SNAKECOLOR      Canvas::rgb(87,104,152)
 #define BUMPCOLOR       Canvas::rgb(255,72,0)
@@ -34,13 +34,11 @@
 #define BACKGROUNDCOLOR Canvas::rgb(205,220,255)
 #define FONTCOLOR       Canvas::rgb(87,104,152)
 
-// 字符串
-#define TEXTFONT  L"微软雅黑"
-#define YOUWIN    L"游戏胜利"
-#define GAMEOVER  L"游戏结束 "
-#define GAMEPAUSE L"游戏暂停"
-#define IMGERROR  L"调用图像资源失败"
-#define SCORE     L"分数: "
+#define TEXTFONT  L"Microsoft Yahei UI"
+#define YOUWIN    L"You Win"
+#define GAMEOVER  L"Game Over"
+#define GAMEPAUSE L"Paused"
+#define SCORE     L"Score: "
 
 class SnakeView
 {

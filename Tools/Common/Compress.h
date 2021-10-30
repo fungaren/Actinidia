@@ -1,18 +1,17 @@
 /*
- * Copyright (c) 2020, FANG All rights reserved.
+ * Copyright (c) 2021, FANG All rights reserved.
  */
 #pragma once
+#include <fstream>
 
-/** 
- * @param code The error code.
- * @return Corresponding text to the error code.
- */
-std::string zerr(int code);
+#include "Base.h"
+
 /**
  * @param code The error code.
  * @return Corresponding text to the error code.
  */
-std::wstring zerrw(int code);
+string_t zerr(int code);
+
 /**
  * @param source The input file path.
  * @param dest The output file path.
@@ -20,6 +19,7 @@ std::wstring zerrw(int code);
  * @return 0 for success, otherwise return the error number.
  */
 int compress(std::istream& source, std::ostream& dest, int level);
+
 /**
  * @param source The input file path.
  * @param dest The output file path.

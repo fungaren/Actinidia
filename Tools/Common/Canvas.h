@@ -1,9 +1,8 @@
 /*
- * Copyright (c) 2020, FANG All rights reserved.
+ * Copyright (c) 2021, FANG All rights reserved.
  */
 #pragma once
 #include "ImageMatrix.h"
-#include <string>
 
 class Canvas
 {
@@ -78,13 +77,14 @@ public:
         dashed  = PS_DASH,
         dotted  = PS_DOT,
         none    = PS_NULL
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
         solid,
         dashed,
         dotted,
         none
-#endif /* _WIN32 */
+#else
+#error unsupported platform
+#endif
     };
 
     /**

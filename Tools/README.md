@@ -20,7 +20,11 @@ You should use Flash or AfterEffect to export a series of animation frames. Then
 
 ## Resource Packer/Unpacker
 
-Pack resource folder to a single `.res` file. The resource file can be load by Actinidia Host. On the contrary, you can also extract the resource file.
+Pack resource folder to a single `.res` file or extract resources from it. The resource file can be loaded by Actinidia Host.
+
+**Attention**
+
+- File names are in ANSI encoding, therefore do not contain any non-ASCII character in the file name.
 
 ## MapEditor
 

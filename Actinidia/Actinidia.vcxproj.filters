@@ -21,6 +21,39 @@
     <ClInclude Include="resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\Tools\Common\Canvas.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\Compress.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\GdiCanvas.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\ImageMatrix.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\Keycodes.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\PiCanvas.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\ResourcePack.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\Timer.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\Window.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Tools\Common\Base.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Actinidia.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Actinidia.cpp">
@@ -45,6 +78,9 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\Tools\Common\PiCanvas.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Tools\Common\Base.cpp">
       <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>

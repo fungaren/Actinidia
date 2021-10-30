@@ -75,7 +75,6 @@ string(CONCAT CMAKE_CXX_FLAGS_DEBUG
     "-Wall "            # display all warnings
     "-g "               # with debug information
     "-O0 "               # no optimize
-    "-Wno-parentheses"   # disable parentheses warning
 )
 string(CONCAT CMAKE_CXX_FLAGS_RELEASE
     "-O3"               # enable optimize

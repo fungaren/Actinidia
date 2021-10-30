@@ -1,5 +1,8 @@
-#ifndef __KEY_CODES_H__
-#define __KEY_CODES_H__
+/*
+ * Copyright (c) 2021, FANG All rights reserved.
+ */
+#pragma once
+
 #ifndef _WIN32
 #define VK_BACK     0x08 
 #define VK_TAB      0x09 
@@ -154,7 +157,7 @@
 
 /* Translate keycodes to win32 defined keycodes. */
 uint16_t keycode_table[UINT16_MAX] = {0};
-#endif /* _WIN32 */
+#endif
 
 #ifdef _GTK
 #include <gdk/gdkkeysyms.h>
@@ -271,6 +274,5 @@ void init_keycode_table()
     keycode_table[GDK_KEY_Y] = VK_Y;
     keycode_table[GDK_KEY_Z] = VK_Z;
 }
-#endif /* _GTK */
 
-#endif /* __KEY_CODES_H__ */
+#endif

@@ -4,156 +4,200 @@
 #ifdef _WIN32
     #include <windows.h>
     #undef max
-#endif /* _WIN32 */
-#ifdef _GTK
-
-#endif /* _GTK */
-#include <string>
-#include <cstring>
+#elif defined _GTK
+    #include <iostream>
+    #include <cstring>
+#else
+#error unsupported platform
+#endif
 #include <filesystem>
-#include "ResourcePack.h"
+
 #include "Compress.h"
+#include "ResourcePack.h"
 
-inline void _trace(std::wstring str) {
-#if (defined _WIN32) && (defined _DEBUG)
-    OutputDebugStringW((str + L'\n').c_str());
-#endif
-}
+#ifdef _WIN32
 
-inline void _trace(std::string str) {
-#if (defined _WIN32) && (defined _DEBUG)
-    OutputDebugStringA((str + '\n').c_str());
+    static inline void _trace(std::wstring str) {
+#ifdef _DEBUG
+        OutputDebugStringW((str + L'\n').c_str());
 #endif
-}
+    }
+    static inline void _trace(std::string str) {
+#ifdef _DEBUG
+        OutputDebugStringA((str + '\n').c_str());
+#endif
+    }
+
+#elif defined _GTK
+
+    static inline void _trace(std::string str) {
+#ifdef _DEBUG
+        std::cout << str << std::endl;
+#endif
+    }
+
+#else
+#error unsupported platform
+#endif
 
 using namespace std::filesystem;
 
-walk_result_t walkFolder(const path& resDirectory)
+std::list<walk_layer> walkFolder(const string_t& dir)
 {
-    std::vector<path> folder_path = { resDirectory };
-    // store meta info to be output
-    walk_result_t queue;
-    // store iterator of parent folder
-    std::vector<std::pair<directory_iterator, walk_result_t::iterator>> parent_iterator;
+    directory_iterator i = directory_iterator(dir);
+    // The root directory is always "game"
+    string_t dirName = ustr("game");
+    std::string u8dirName = toUTF8(dirName);
+    std::list<walk_layer> tree = {
+        { entity{ TYPE_FOLDER, 0, (uint16_t)u8dirName.size(), 0 }, u8dirName, std::nullopt }
+    };
+    std::vector<std::tuple<path, directory_iterator, std::list<walk_layer>::iterator>> dirStack = {
+        { dir, i, --tree.end() }
+    };
 
-    directory_iterator i;
-    uint8_t depth = 0;
-recursive:
-    // enter the directory, and the root directory is always "game"
-    std::string foldername = (depth == 0) ? "game" : folder_path.back().filename().u8string();
-    i = directory_iterator(folder_path.back());
-
-    // write entity + file name
-    entity e{ TYPE_FOLDER, 0, (uint16_t)foldername.size(), 0 };
-    // store directory_iterator
-    queue.push_back({ e, foldername, std::nullopt });
-    parent_iterator.push_back({ i,--queue.end() });
-
-    ++depth;
-
-    // walk the directory
+this_dir:
+    // Walk the directory
     while(i != directory_iterator())
     {
-        if (depth == 64)
-            return queue;       // not support depth > 64
+        if (dirStack.size() >= 64) {
+            _trace("Directory is too deep");
+            return {};
+        }
 
         if (i->is_directory())
         {
-            if (static_cast<path>(*i).filename().wstring().front() == L'.') {
-                ++i; // skip hidden folder (eg., .git)
+            path __dir = static_cast<path>(*i);
+            dirName = __dir.filename().to_ustr();
+            if (dirName[0] == '.')
+            {
+                _trace(string_t(ustr("Skip hidden folder: ")) + dirName);
+                ++i;
                 continue;
             }
-            _trace(static_cast<path>(*i).filename());
-            folder_path.push_back(*i);
-            goto recursive;
-        resume:
-            // update parent folder size
-            auto h = std::get<0>(*parent_iterator.rbegin()->second);
-            parent_iterator.pop_back();
-            std::get<0>(*(parent_iterator.rbegin()->second)).dataSize += 
-                sizeof(entity) + h.nameSize + h.dataSize;
-            // restore
-            i = parent_iterator.back().first;
-            ++i;
+            _trace(dirName);
+
+            u8dirName = toUTF8(dirName);
+            tree.push_back({ entity{ TYPE_FOLDER, 0, (uint16_t)u8dirName.size(), 0 }, u8dirName, std::nullopt });
+            i = directory_iterator(__dir);
+            dirStack.push_back({ __dir, i, --tree.end() });
+            goto this_dir;
         }
         else if (i->is_regular_file())
         {
-            path _filename = static_cast<path>(*i).filename();
-            if (_filename.wstring().front() == L'.') {
-                ++i; // skip hidden folder (eg., .git)
+            path __file = static_cast<path>(*i);
+            string_t filePath = __file.to_ustr();
+            string_t fileName = __file.filename().to_ustr();
+            if (fileName[0] == '.')
+            {
+                _trace(string_t(ustr("skip hidden file: ")) + fileName);
+                ++i;
                 continue;
             }
-            _trace(_filename);
-            // get utf-8 encoded file name
-            std::string filename = _filename.u8string();
-            uint32_t file_size = (uint32_t)i->file_size();
-            uint16_t name_size = (uint16_t)filename.size();
+            _trace(fileName);
+            uintmax_t __size = i->file_size();
+            if (__size >= UINT32_MAX)
+            {
+                _trace(ustr("The file is too large, skip"));
+                ++i;
+                continue;
+            }
+            uint32_t fileSize = (uint32_t)__size;
+            std::string u8fileName = toUTF8(fileName);
+            if ((__size = u8fileName.size()) >= UINT16_MAX)
+            {
+                _trace(ustr("The filename is too long, skip"));
+                ++i;
+                continue;
+            }
+            uint16_t nameSize = (uint16_t)__size;
 
-            // write entity + file name + data
-            entity e{ TYPE_FILE, 0, name_size, file_size };
-            queue.push_back({ e, filename, static_cast<path>(*i) });
+            tree.push_back({ entity{ TYPE_FILE, 0, nameSize, fileSize }, u8fileName, filePath });
 
-            // update parent folder size
-            auto h = parent_iterator.rbegin()->second;
-            std::get<0>(*h).dataSize += sizeof(entity) + name_size + file_size;
+            // Increase the directory size
+            entity& e = std::get<2>(dirStack.back())->e;
+            e.dataSize += sizeof(entity) + nameSize + fileSize;
             ++i;
+        } else {
+            ++i; // Not a regular file or folder
         }
+        continue;
+
+    resume:
+        // Get child directory entity
+        entity& e = std::get<2>(dirStack.back())->e;
+        // Close the child directory
+        dirStack.pop_back();
+        // Increase parent directory size
+        std::get<2>(dirStack.back())->e.dataSize += sizeof(entity) + e.nameSize + e.dataSize;
+        // Recover the iterator
+        i = std::get<1>(dirStack.back());
+        // Next file or directory
+        ++i;
     }
-    // back to parent directory
-    folder_path.pop_back();
-    if (!folder_path.empty()) {
-        --depth;
+    // Back to parent directory
+    if (dirStack.size() != 1)
         goto resume;
-    }
-    return queue;
+    return tree;
 }
 
-bool generatePack(const std::string& destFile,
-    const walk_result_t& queue,
+bool generatePack(
+    const string_t& destFile,
+    const std::list<walk_layer>& tree,
     std::function<void(size_t filesize)> update_progress)
 {
     std::stringstream buffer;
     buffer << MAGIC; // Magic
-    for (auto& t : queue) {
-        buffer.write((char*)&std::get<0>(t), sizeof(entity)); // Entity
-        buffer << std::get<1>(t); // Name
-        if (std::get<2>(t).has_value())
+    for (auto& t : tree) {
+        // Entity header
+        buffer.write((char*)&t.e, sizeof(entity));
+        // Name
+        buffer << t.u8name;
+        // File data
+        if (t.path.has_value())
         {
-            std::ifstream p(std::get<2>(t).value(), std::ios::binary); // Input stream
+            // Open file to read all data
+            std::ifstream p(t.path.value(), std::ios::binary);
+            // Get file size
             p.seekg(0, std::ios::end);
-            std::streampos pos = p.tellg(); // get file size
-            update_progress(pos); // the callback update packing progress
-            if (pos != 0)
+            std::streampos fsize = p.tellg();
+            update_progress(fsize);
+            if (fsize != 0)
             {
                 p.seekg(0, std::ios::beg);
-                buffer << p.rdbuf(); // Data
+                buffer << p.rdbuf();
             }
         }
     }
+    // Open output file
     std::ofstream dst(destFile, std::ios::binary);
-    if (!dst) {
+    if (!dst)
+    {
 #ifdef _WIN32
         char error_str[1000];
         strerror_s(error_str, sizeof error_str, errno);
-#endif /* _WIN32 */
-#ifdef _GTK
+#elif defined _GTK
         char *error_str = strerror(errno);
-#endif /* _GTK */
+#else
+#error unsupported platform
+#endif
+
         _trace(std::string("Failed to output file: ") + error_str);
         return false;
     }
+    // Compress data and write to file
     int result = compress(buffer, dst, 9);
     if (result != 0)
     {
-        _trace(zerrw(result));
+        _trace(zerr(result));
         return false;
     }
     return true;
 }
 
-void parsePack(std::istream& res,
-    std::function<void (const path&)> new_folder,
-    std::function<void (std::istream&, const path&, uint32_t)> new_file) noexcept(false)
+static void parsePack(
+    std::istream& res,
+    std::function<void (const path&)> newFolder,
+    std::function<void (std::istream&, const path&, uint32_t)> newFile) noexcept(false)
 {
     path relativePath(".");
     std::vector<uint32_t> folder_size;
@@ -161,115 +205,98 @@ void parsePack(std::istream& res,
     for (size_t i = 0; i < sizeof(MAGIC) - 1; i++) {
         if (MAGIC[i] != res.get())
         {
-            std::runtime_error e("Invalid resouce pack");
-            throw(e);
+            throw ustr_error(ustr("Invalid resouce pack"));
         }
     }
-    
+
     do {
         entity e;
         res.read((char*)&e, sizeof(entity));
 
-        // read name
-        char* name = new char[(size_t)e.nameSize + 1];
-        res.read(name, e.nameSize);
-        name[e.nameSize] = '\0';
-        try {
-            relativePath /= u8path(name);
-        }
-        catch (std::exception &e) {
-            delete[] name;
-            throw e;
-        }
-        delete[] name;
+        // Read UTF-8 name
+        std::string u8name;
+        u8name.resize(e.nameSize);
+        res.read(&u8name[0], e.nameSize);
+        relativePath /= path(fromUTF8(u8name));
 
         if (e.type == TYPE_FOLDER)
         {
-            new_folder(relativePath);
+            newFolder(relativePath);
 
-            // empty folder
-            if (e.dataSize == 0) {
-
-                // calc remaining bytes in this folder to be read
+            // Empty folder
+            if (e.dataSize == 0)
+            {
+                // Calc remaining bytes in this folder to be read
                 if (!folder_size.empty())
                     folder_size.back() -= e.nameSize + sizeof(entity);
 
-                // back to parent folder
+                // Back to parent folder
                 relativePath = relativePath.parent_path();
             }
-            else { // not empty folder
-
-                // calc remaining bytes in this folder to be read
+            else
+            {
+                // Not empty folder, calc remaining bytes in this folder to be read
                 if (!folder_size.empty())
                     folder_size.back() -= e.nameSize + sizeof(entity) + e.dataSize;
 
-                // enter subfolder
+                // Enter subfolder
                 folder_size.push_back(e.dataSize);
             }
         }
         else if (e.type == TYPE_FILE)
         {
-            // calc remaining bytes in this folder to be read
-            folder_size.back() -= e.nameSize + sizeof(entity) + e.dataSize;
-            
-            if (e.dataSize != 0)
-            {
-#if _DEBUG
-                std::streampos p = res.tellg();
+            std::streampos p = res.tellg();
 
-                // dump file or read file
-                new_file(res, relativePath, e.dataSize);
+            // Dump file or read file
+            newFile(res, relativePath, e.dataSize);
 
-                // you must consume these bytes
-                _ASSERT(res.tellg() == p + std::streamoff(e.dataSize));
-#else
-                // dump file or read file
-                new_file(res, relativePath, e.dataSize);
-#endif /* _DEBUG */
-            }
+            // Handle next file
+            res.seekg(p + std::streamoff(e.dataSize));
 
-            // back to parent folder
+            // Back to parent folder
             relativePath = relativePath.parent_path();
+
+            // Calc remaining bytes in this folder to be read
+            folder_size.back() -= e.nameSize + sizeof(entity) + e.dataSize;
+        }
+        else {
+            throw ustr_error(ustr("Invalid resouce pack"));
         }
 
-        while (!folder_size.empty() && folder_size.back() == 0) {
-            // no more files/folders to load
+        while (!folder_size.empty() && folder_size.back() == 0)
+        {
+            // No more files/folders to load
             folder_size.pop_back();
             relativePath = relativePath.parent_path();
         }
-    } while (relativePath != ".");
+    } while (relativePath != ustr("."));
 }
 
-bool extractPack(const path& resFile) noexcept(false)
+bool extractPack(const string_t& resFile, const string_t& dir) noexcept(false)
 {
-    std::ostringstream extract_dir_name;
-    extract_dir_name << "extract_" << time(NULL);
-    path folder_path = resFile.parent_path() / extract_dir_name.str();
-
-    create_directory(folder_path);  // extract files to this folder
+    create_directory(dir);  // Extract files to this folder
 
     std::ifstream res(resFile, std::ios::binary);
     if (!res.good()) {
-        std::runtime_error e("Can not open file");
-        throw e;
+        throw ustr_error(ustr("Can not open file"));
     }
     std::stringstream buffer;
     int result = decompress(res, buffer);
     if (result != 0)
     {
-        _trace(zerrw(result));
+        _trace(zerr(result));
         return false;
     }
     try {
         parsePack(
             buffer,
-            // new folder: create folder
-            [&folder_path](const path& relativePath) {
-                create_directory(folder_path / relativePath);
+            // New folder: create folder
+            [&dir](const path& relativePath) {
+                create_directory(path{ dir } / relativePath);
             },
-            // new file: dump file
-            [&folder_path](std::istream& res, const path& relativePath, uint32_t dataSize) {
-                std::ofstream out(folder_path / relativePath, std::ios::binary);
+            // New file: dump file
+            [&dir](std::istream& res, const path& relativePath, uint32_t dataSize) {
+                std::ofstream out(path{ dir } / relativePath, std::ios::binary);
 
                 char buffer[4096];
                 while (dataSize > 4096) {
@@ -282,60 +309,59 @@ bool extractPack(const path& resFile) noexcept(false)
             }
         );
     }
-    catch (std::exception&) {
+    catch (ustr_error& e) {
+        _trace(e.what());
         return false;
     }
     return true;
 }
 
-pResourcePack ResourcePack::parsePack(const path& resFile) noexcept(false)
+pResourcePack ResourcePack::parsePack(const string_t& pathname) noexcept(false)
 {
-    std::ifstream res(resFile, std::ios::binary);
+    std::ifstream res(pathname, std::ios::binary);
     if (!res.good()) {
-        std::runtime_error e("Can not open file");
-        throw e;
+        throw ustr_error(ustr("Can not open file"));
     }
     std::stringstream buffer;
     int result = decompress(res, buffer);
     if (result != 0)
     {
-        std::runtime_error e(zerr(result));
-        throw e;
+        throw ustr_error(zerr(result));
     }
     pResourcePack pack = new ResourcePack();
     ::parsePack(
         buffer,
-        // new folder
+        // New folder
         [](const path& relativePath) { },
-        // new file: read into RAM
+        // New file: read into RAM
         [pack](std::istream& res, const path& relativePath, uint32_t dataSize) {
             uint8_t* data = new uint8_t[dataSize];
             res.read((char*)data, dataSize);
-            pack->list.emplace_back(relativePath.u8string(), data, dataSize);
+            pack->list.emplace_back(relativePath.to_ustr(), data, dataSize);
         }
     );
 
     return pack;
 }
 
-bool ResourcePack::readResource(std::string pathname, uint8_t** p, uint32_t* size) const
+bool ResourcePack::readResource(const string_t& pathname, uint8_t** p, uint32_t* size) const
 {
-    // the pathname should be like "./path/to/file.jpg"
-    if (pathname[0] != L'.')
+    // The pathname should be like "./path/to/file.jpg"
+    if (pathname[0] != '.')
         return false;
 
     // Converts all directory separators in the generic-format view of the
-    // path to the preferred directory separator. 
-    const std::string pathname_ = static_cast<path>(pathname).make_preferred().string();
+    // path to the preferred directory separator.
+    const string_t pathname_ = static_cast<path>(pathname).make_preferred().to_ustr();
 
-    auto i = std::find_if(list.begin(), list.end(), 
+    auto i = std::find_if(list.begin(), list.end(),
         [&pathname_](const ResourceFile& i) {
             return (i.path == pathname_);
         }
     );
 
     if (i != list.end()) {
-        // found target file, set the data pointer & size
+        // Found target file, set the data pointer & size
         *p = i->data;
         *size = i->dataSize;
         return true;

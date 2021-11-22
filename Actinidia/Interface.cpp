@@ -6,9 +6,6 @@
     #undef max
     #undef PlaySound
 
-    #pragma comment(lib, "lua/lua.lib")
-    #pragma comment(lib, "bass/bass.lib")
-
     #include "lua/lua.hpp"
 #elif defined _GTK
     #include <gtk/gtk.h>

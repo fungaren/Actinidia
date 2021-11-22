@@ -1,7 +1,4 @@
 //{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ 生成的包含文件。
-// 供 Tools.rc 使用
-//
 #define IDD_MAIN                        101
 #define IDI_MAIN                        102
 #define IDB_MAIN                        103

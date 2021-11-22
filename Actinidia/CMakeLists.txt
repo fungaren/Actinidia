@@ -1,156 +1,167 @@
-project(actinidia)
-cmake_minimum_required(VERSION 3.4.1)
+if (UNIX)
+    # Find dependencies
+    find_package(ZLIB REQUIRED)
+    find_package(PNG REQUIRED)
+    find_package(JPEG REQUIRED)
+    find_package(Lua REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 
-set(ACTINIDIA_VERSION_MAJOR 1)
-set(ACTINIDIA_VERSION_MINOR 0)
-set(ACTINIDIA_VERSION_PATCH 0)
-message(STATUS "Actinidia version: ${ACTINIDIA_VERSION_MAJOR}."
-        "${ACTINIDIA_VERSION_MINOR}.${ACTINIDIA_VERSION_PATCH}")
+    include_directories(
+        ${ZLIB_INCLUDE_DIRS}
+        ${PNG_INCLUDE_DIRS}
+        ${JPEG_INCLUDE_DIRS}
+        ${LUA_INCLUDE_DIRS}
+        ${GTK3_INCLUDE_DIRS}
+    )
+    link_directories(
+        ${PROJECT_SOURCE_DIR}/external/bass
+    )
 
-# find dependencies
-find_package(ZLIB REQUIRED)
-find_package(PNG REQUIRED)
-find_package(JPEG REQUIRED)
-find_package(Lua REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    # Set BASS architecture
+    if (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm")
+        set(BASS "bass-hardfp")
+    elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
+        set(BASS "bass-aarch64")
+    elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "i386")
+        set(BASS "bass-x86")
+    elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "i686")
+        set(BASS "bass-x86")
+    elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        set(BASS "bass-x86_64")
+    else()
+        message(FATAL_ERROR "Unsupported processor: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+    endif()
+    message(STATUS "Using lib${BASS}.so")
 
-include_directories(
-    ${ZLIB_INCLUDE_DIRS}
-    ${PNG_INCLUDE_DIRS}
-    ${JPEG_INCLUDE_DIRS}
-    ${LUA_INCLUDE_DIRS}
-    ${GTK3_INCLUDE_DIRS}
-)
-link_directories(
-    ${CMAKE_INSTALL_PREFIX}/lib/
-    bass/
-)
-
-# set BASS architecture
-if (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm")
-    set(BASS "bass-hardfp")
-elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
-    set(BASS "bass-aarch64")
-elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "i386")
-    set(BASS "bass-x86")
-elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "i686")
-    set(BASS "bass-x86")
-elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
-    set(BASS "bass-x86_64")
-else()
-    message(FATAL_ERROR "Unsupported processor: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+    set(EXTRA_LIBS
+        ${LUA_LIBRARIES}
+        ${GTK3_LIBRARIES}
+        ${PNG_LIBRARIES}
+        ${JPEG_LIBRARIES}
+        ${ZLIB_LIBRARIES}
+        ${BASS}
+        stdc++fs
+        pthread
+    )
+elseif (WIN32)
+    include_directories(
+        ${PROJECT_SOURCE_DIR}/external/bass
+        ${PROJECT_SOURCE_DIR}/external/zlib
+        ${PROJECT_SOURCE_DIR}/external/libpng
+        ${PROJECT_SOURCE_DIR}/external/libjpeg
+        ${lua_SOURCE_DIR}
+    )
+    link_directories(
+        ${PROJECT_SOURCE_DIR}/external/bass
+        ${PROJECT_SOURCE_DIR}/external/libjpeg
+        ${PROJECT_SOURCE_DIR}/external/libpng
+        ${PROJECT_SOURCE_DIR}/external/zlib
+        ${lua_BINARY_DIR}
+    )
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(EXTRA_LIBS
+            bass.lib
+            liblua.lib
+            jpegd.lib
+            libpng16d.lib
+            zlibd.lib
+        )
+    else()
+        set(EXTRA_LIBS
+            bass.lib
+            liblua.lib
+            jpeg.lib
+            libpng16.lib
+            zlib.lib
+        )
+    endif()
 endif()
-message(STATUS "Using lib${BASS}.so")
 
-# for std filesystem
-set(CMAKE_CXX_STANDARD 17)
-
-# add sources
-aux_source_directory(../Tools/Common SOURCES)
+# Add sources
+aux_source_directory(${PROJECT_SOURCE_DIR}/common SOURCES)
 list(APPEND SOURCES
-    "Interface.cpp"
-    "Actinidia.cpp"
-)
-set(target ${PROJECT_NAME})
-add_executable(${target} ${SOURCES})
-target_link_libraries(
-    ${target}
-    ${LUA_LIBRARIES}
-    ${GTK3_LIBRARIES}
-    ${PNG_LIBRARIES}
-    ${JPEG_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-    ${BASS}
-    stdc++fs
-    pthread
+    "interface.cpp"
+    "actinidia.cpp"
 )
 
-add_definitions(
-    -D_GTK
-)
-
-# set build type and flags
-string(CONCAT CMAKE_CXX_FLAGS_DEBUG
-    "-Wall "            # display all warnings
-    "-g "               # with debug information
-    "-O0 "               # no optimize
-)
-string(CONCAT CMAKE_CXX_FLAGS_RELEASE
-    "-O3"               # enable optimize
-)
-if (CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE "Release")
+if (UNIX)
+    # Create desktop icon
+    configure_file(
+        "static/actinidia.desktop.in"
+        "static/actinidia.desktop"
+    )
+elseif (WIN32)
+    # Resource file
+    configure_file(
+        "static/actinidia.rc.in"
+        "static/actinidia.rc"
+    )
+    list(APPEND SOURCES "static/actinidia.rc")
+    list(APPEND SOURCES "static/actinidia.manifest")
 endif()
-message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-# default path is /usr/local/
-message(STATUS "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
+set(TARGET actinidia)
+add_executable(${TARGET} ${SOURCES})
 
-# set install path
-set(ACTINIDIA_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/share/actinidia")
+# Link libraries
+target_link_libraries(${TARGET} ${EXTRA_LIBS})
 
-# install the program
-install(TARGETS ${target} RUNTIME
-    DESTINATION ${ACTINIDIA_INSTALL_PATH}
-)
-# create symbolic link to the program
-execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
-    ${ACTINIDIA_INSTALL_PATH}/${target} ${target}.symlink)
-# copy the symbolic link to /usr/local/bin
-install(FILES "${PROJECT_SOURCE_DIR}/actinidia.symlink"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-    RENAME ${target}
-)
+if (UNIX)
+    # Install the program
+    install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 
-# install the bass library
-install(FILES "${PROJECT_SOURCE_DIR}/bass/lib${BASS}.so"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-)
-# preserve runpath
-set_property(TARGET ${target} PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
+    # Install the bass library
+    install(FILES "${PROJECT_SOURCE_DIR}/external/bass/lib${BASS}.so" TYPE LIB)
 
-# copy game resource pack if provided
-install(FILES "${PROJECT_SOURCE_DIR}/game.res"
-    DESTINATION ${ACTINIDIA_INSTALL_PATH}
-    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    OPTIONAL
-)
+    # Set runpath
+    # set_property(TARGET ${TARGET} PROPERTY INSTALL_RPATH ${CMAKE_INSTALL_LIBDIR})
 
-# copy logo
-install(FILES
-    "${PROJECT_SOURCE_DIR}/logo.png"
-    DESTINATION ${ACTINIDIA_INSTALL_PATH}
-    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-)
+    # Copy resource pack if provided
+    install(FILES "static/game.res"
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}
+        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+        OPTIONAL
+    )
 
-# create desktop icon
-configure_file(
-    "${PROJECT_SOURCE_DIR}/actinidia.desktop.in"
-    "${PROJECT_BINARY_DIR}/actinidia.desktop"
-)
-install(FILES
-    "${PROJECT_SOURCE_DIR}/actinidia.desktop"
-    DESTINATION /usr/share/applications
-    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-)
+    # Copy logo
+    install(FILES
+        "static/logo.png"
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}
+        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    )
 
-# create package
-set(CMAKE_PROJECT_DESCRIPTION "A custom game powered by Actinidia game engine.")
-set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
-set(CPACK_PACKAGE_DESCRIPTION ${CMAKE_PROJECT_DESCRIPTION})
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${CMAKE_PROJECT_DESCRIPTION})
-set(CPACK_PACKAGE_VERSION_MAJOR ${ACTINIDIA_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${ACTINIDIA_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${ACTINIDIA_VERSION_PATCH})
-# set deb package configs
-set(CPACK_GENERATOR "DEB")
-set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/mooction/actinidia")
-set(CPACK_DEBIAN_PACKAGE_SECTION "games")
-set(CPACK_DEBIAN_PACKAGE_PRIORITY "Optional")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "FANG")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS
-    "libgtk-3-0, zlib1g, libpng16-16, liblua5.3-0, libjpeg62-turbo|libjpeg62"
-)
-include(CPack)
+    # Create desktop icon
+    install(FILES
+        "static/actinidia.desktop"
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications
+        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    )
+
+elseif (WIN32)
+    # Required DLLs on Windows
+    set(ALL_DLLS_DEBUG
+        "${PROJECT_SOURCE_DIR}/external/bass.dll"
+        "${PROJECT_SOURCE_DIR}/external/jpeg62d.dll"
+        "${PROJECT_SOURCE_DIR}/external/libpng16d.dll"
+        "${PROJECT_SOURCE_DIR}/external/zlibd.dll"
+    )
+    set(ALL_DLLS_RELEASE
+        "${PROJECT_SOURCE_DIR}/external/bass.dll"
+        "${PROJECT_SOURCE_DIR}/external/jpeg62.dll"
+        "${PROJECT_SOURCE_DIR}/external/libpng16.dll"
+        "${PROJECT_SOURCE_DIR}/external/zlib.dll"
+    )
+    set(ALL_DLLS $<$<CONFIG:Debug>:${ALL_DLLS_DEBUG}>$<$<CONFIG:Release>:${ALL_DLLS_RELEASE}>)
+    set(STATIC_RESOURCES
+        "static/logo.png"
+        "static/actinidia.visualelementsmanifest.xml"
+    )
+    # Copy DLLs and static resources
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND_EXPAND_LISTS
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ALL_DLLS} ${PROJECT_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STATIC_RESOURCES} ${PROJECT_BINARY_DIR}
+        COMMENT "Copying DLLs and static resources" VERBATIM
+    )
+endif()

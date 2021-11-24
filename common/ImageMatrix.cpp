@@ -2,17 +2,9 @@
  * Copyright (c) 2020, FANG All rights reserved.
  */
 #ifdef _WIN32
+    // #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
     #undef max
-    #ifdef _DEBUG
-        #pragma comment(lib, "libpng/libpng16d.lib")
-        #pragma comment(lib, "zlib/zlibd.lib")
-        #pragma comment(lib, "libjpeg/jpegd.lib")
-    #else
-        #pragma comment(lib, "libpng/libpng16.lib")
-        #pragma comment(lib, "zlib/zlib.lib")
-        #pragma comment(lib, "libjpeg/jpeg.lib")
-    #endif
 #elif defined _GTK
     #include <iostream>
 #else

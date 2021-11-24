@@ -2,7 +2,7 @@
  * Copyright (c) 2021, FANG All rights reserved.
  */
 #pragma once
-#include "../Tools/Common/Window.h"
+#include "Window.h"
 
 bool LuaInit();
 void OnClean();

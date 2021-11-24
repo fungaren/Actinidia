@@ -8,9 +8,9 @@
 #include <vector>
 #include <filesystem>
 
-#include "Common/PiCanvas.h"
-#include "Common/ResourcePack.h"
-#include "Common/ImageMatrix.h"
+#include "PiCanvas.h"
+#include "ResourcePack.h"
+#include "ImageMatrix.h"
 
 using namespace std::filesystem;
 

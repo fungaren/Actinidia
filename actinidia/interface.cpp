@@ -2,11 +2,12 @@
  * Copyright (c) 2020, FANG All rights reserved.
  */
 #ifdef _WIN32
+    // #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
     #undef max
     #undef PlaySound
 
-    #include "lua/lua.hpp"
+    #include <lua.hpp>
 #elif defined _GTK
     #include <gtk/gtk.h>
     #include <lua5.3/lua.hpp>
@@ -19,9 +20,10 @@
 #include <filesystem>
 #include <map>
 
-#include "bass/bass.h"
-#include "../Tools/Common/ResourcePack.h"
-#include "Actinidia.h"
+#include "ResourcePack.h"
+
+#include "bass.h"
+#include "actinidia.h"
 
 lua_State* L = nullptr;
 extern pResourcePack pack;

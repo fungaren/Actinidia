@@ -1,3 +1,8 @@
+include_directories(
+    ${PROJECT_SOURCE_DIR}/common
+    ${PROJECT_SOURCE_DIR}/tools
+)
+aux_source_directory(${PROJECT_SOURCE_DIR}/common SOURCES)
 if (UNIX)
     # Find dependencies
     find_package(ZLIB REQUIRED)
@@ -16,13 +21,7 @@ if (UNIX)
         ${ZLIB_LIBRARIES}
         stdc++fs
     )
-    set(SOURCES
-        ${PROJECT_SOURCE_DIR}/common/ResourcePack.cpp
-        ${PROJECT_SOURCE_DIR}/common/ImageMatrix.cpp
-        ${PROJECT_SOURCE_DIR}/common/Compress.cpp
-        ${PROJECT_SOURCE_DIR}/common/PiCanvas.cpp
-        "tools_cmd.cpp"
-    )
+    list(APPEND SOURCES "tools_cmd.cpp")
 elseif (WIN32)
     include_directories(
         ${PROJECT_SOURCE_DIR}/external/zlib
@@ -49,11 +48,7 @@ elseif (WIN32)
             zlib.lib
         )
     endif()
-    set(SOURCES
-        ${PROJECT_SOURCE_DIR}/common/ResourcePack.cpp
-        ${PROJECT_SOURCE_DIR}/common/ImageMatrix.cpp
-        ${PROJECT_SOURCE_DIR}/common/Compress.cpp
-        ${PROJECT_SOURCE_DIR}/common/PiCanvas.cpp
+    list(APPEND SOURCES
         "tools.cpp"
         "snake/snake.cpp"
     )
@@ -62,12 +57,14 @@ elseif (WIN32)
         "static/tools.rc.in"
         "static/tools.rc"
     )
-    list(APPEND SOURCES "static/tools.rc")
-    list(APPEND SOURCES "static/tools.manifest")
+    list(APPEND SOURCES
+        "static/tools.rc"
+        "static/tools.manifest"
+    )
 endif()
 
 set(TARGET actools)
-add_executable(${TARGET} ${SOURCES})
+add_executable(${TARGET} WIN32 ${SOURCES})
 
 # Link libraries
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
@@ -91,7 +88,7 @@ elseif (WIN32)
     # Copy DLLs
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND_EXPAND_LISTS
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ALL_DLLS} ${PROJECT_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ALL_DLLS}" "${PROJECT_BINARY_DIR}"
         COMMENT "Copying DLLs" VERBATIM
     )
 endif()

@@ -1,5 +1,6 @@
 project(actinidia)
 cmake_minimum_required(VERSION 3.11)
+cmake_policy(SET CMP0115 OLD)
 
 set(PROJECT_HOMEPAGE_URL "https://github.com/mooction/Actinidia")
 set(PROJECT_DESCRIPTION "Actinidia game engine and tools allow you "
@@ -15,6 +16,11 @@ message(STATUS "Actinidia version: ${PROJECT_VERSION_MAJOR}."
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set build type
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 if (UNIX)
     string(CONCAT CMAKE_CXX_FLAGS_DEBUG
         "-Wall "            # Display all warnings
@@ -25,22 +31,17 @@ if (UNIX)
         "-O3 "               # Enable optimize
     )
     add_definitions(-D_GTK)
+elseif (WIN32)
+    add_definitions(-DUNICODE -D_UNICODE)
 endif()
 
-# Set build type
-if (CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
-
-# Set the possible values of build type for cmake-gui
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-
 # default path is /usr/local/
 message(STATUS "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 
-add_subdirectory(external/lua)
+if (WIN32)
+    include(external/lua/CMakeLists.txt)
+endif()
 add_subdirectory(actinidia)
 add_subdirectory(tools)
 

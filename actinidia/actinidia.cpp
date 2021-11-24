@@ -2,6 +2,7 @@
  * Copyright (c) 2020, FANG All rights reserved.
  */
 #ifdef _WIN32
+    // #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
     #undef max
 
@@ -26,10 +27,11 @@
 #include <map>
 #include <filesystem>
 
-#include "../Tools/Common/ResourcePack.h"
-#include "../Tools/Common/Timer.h"
+#include "ResourcePack.h"
+#include "Timer.h"
+
 #include "resource.h"
-#include "Actinidia.h"
+#include "actinidia.h"
 
 // In Direct mode, the name of resource folder must be "game"
 bool bDirectMode;

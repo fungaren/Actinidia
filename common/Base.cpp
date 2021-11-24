@@ -2,7 +2,10 @@
  * Copyright (c) 2021, FANG All rights reserved.
  */
 #ifdef _WIN32
-#include <Windows.h>
+    // #define WIN32_LEAN_AND_MEAN
+    // #define WIN32_LEAN_AND_MEAN
+    #include <Windows.h>
+    #undef max
 #elif defined _GTK
 #else
 #error unsupported platform

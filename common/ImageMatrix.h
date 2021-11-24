@@ -3,21 +3,21 @@
  */
 #pragma once
 #ifdef _WIN32
-    #include <windows.h>
+    // #define WIN32_LEAN_AND_MEAN
+    #include <Windows.h>
     #undef max
-    #include "../libpng/png.h"
-    #include "../zlib/zlib.h"
-    extern "C" {
-        #include "../libjpeg/jpeglib.h"
-    }
 #elif defined _GTK
-    #include <png.h>
-    #include <zlib.h>
-    #include <jpeglib.h>
     #include <cstring>
 #else
 #error unsupported platform
 #endif
+
+#include <png.h>
+#include <zlib.h>
+extern "C" {
+    #include <jpeglib.h>
+}
+
 #include <stdexcept>
 #include <memory>
 

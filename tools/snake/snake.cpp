@@ -1,17 +1,18 @@
 ﻿/*
  * Copyright (c) 2020, FANG All rights reserved.
  */
+// #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef max
 
 #include "resource.h"
 
-#include "Common/Window.h"
-#include "Common/Canvas.h"
-#include "Common/Timer.h"
-#include "Snake.h"
+#include "Window.h"
+#include "Canvas.h"
+#include "Timer.h"
+#include "snake.h"
 
-SnakeView::SnakeView(HINSTANCE i, HWND parent) : 
+SnakeView::SnakeView(HINSTANCE i, HWND parent) :
     hInst(i), Direction(TORIGHT), Eaten(false), EdgeWidth(0),
     FoodPosX(0), FoodPosY(0), HeadPosX(0), HeadPosY(0), SnakeLen(0), Using(false)
 {

@@ -2,15 +2,15 @@
  * Copyright (c) 2020, FANG All rights reserved.
  */
 #ifdef _WIN32
+    // #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
     #undef max
-    #include "../zlib/zlib.h"
 #elif defined _GTK
-    #include "zlib.h"
 #else
 #error unsupported platform
 #endif
 
+#include <zlib.h>
 #include "Compress.h"
 
 #ifndef _ASSERT

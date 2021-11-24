@@ -2,13 +2,15 @@
  * Copyright (c) 2020, FANG All rights reserved.
  */
 #ifdef _WIN32
-    #include <windows.h>
+    // #define WIN32_LEAN_AND_MEAN
+    #include <Windows.h>
     #undef max
 #elif defined _GTK
     #include <gtk/gtk.h>
 #else
 #error unsupported platform
 #endif
+
 #include "Window.h"
 #include "Keycodes.h"
 

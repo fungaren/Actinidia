@@ -1,10 +1,13 @@
 ﻿/*
  * Copyright (c) 2020, FANG All rights reserved.
  */
+// #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef max
+
 #include <SDKDDKVer.h>
 #include <Commctrl.h>
+
 #if defined _M_IX86
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls'"\
 " version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -22,10 +25,13 @@
 #include <thread>
 #include <filesystem>
 
+#include "ResourcePack.h"
+#include "PiCanvas.h"
+#include "Window.h"
+#include "Timer.h"
+
 #include "resource.h"
-#include "Common/Canvas.h"
-#include "Common/PiCanvas.h"
-#include "Common/ResourcePack.h"
+#include "snake/snake.h"
 
 // HWND of the dialog
 HWND hWnd = NULL;
@@ -105,7 +111,6 @@ void deployUnpack(const string_t& resFile)
     });
 }
 
-#include "Common/Canvas.h"
 bool imageConcatenate(const string_t& destImage, const std::vector<string_t>& imgFiles)
 {
     std::vector<pImageMatrix> imgs;
@@ -515,9 +520,6 @@ INT_PTR CALLBACK FontImg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 //---------------------------------------------
-#include "Common/Window.h"
-#include "Common/Timer.h"
-#include "Snake/Snake.h"
 SnakeView* easter = nullptr;
 
 INT_PTR CALLBACK MainDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)

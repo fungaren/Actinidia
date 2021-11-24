@@ -1,3 +1,7 @@
+include_directories(
+    ${PROJECT_SOURCE_DIR}/common
+    ${PROJECT_SOURCE_DIR}/actinidia
+)
 if (UNIX)
     # Find dependencies
     find_package(ZLIB REQUIRED)
@@ -50,19 +54,18 @@ elseif (WIN32)
         ${PROJECT_SOURCE_DIR}/external/zlib
         ${PROJECT_SOURCE_DIR}/external/libpng
         ${PROJECT_SOURCE_DIR}/external/libjpeg
-        ${lua_SOURCE_DIR}
+        ${lua_SOURCE_DIR}/src
     )
     link_directories(
         ${PROJECT_SOURCE_DIR}/external/bass
         ${PROJECT_SOURCE_DIR}/external/libjpeg
         ${PROJECT_SOURCE_DIR}/external/libpng
         ${PROJECT_SOURCE_DIR}/external/zlib
-        ${lua_BINARY_DIR}
     )
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         set(EXTRA_LIBS
             bass.lib
-            liblua.lib
+            liblua
             jpegd.lib
             libpng16d.lib
             zlibd.lib
@@ -70,7 +73,7 @@ elseif (WIN32)
     else()
         set(EXTRA_LIBS
             bass.lib
-            liblua.lib
+            liblua
             jpeg.lib
             libpng16.lib
             zlib.lib
@@ -102,7 +105,7 @@ elseif (WIN32)
 endif()
 
 set(TARGET actinidia)
-add_executable(${TARGET} ${SOURCES})
+add_executable(${TARGET} WIN32 ${SOURCES})
 
 # Link libraries
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
@@ -154,14 +157,14 @@ elseif (WIN32)
     )
     set(ALL_DLLS $<$<CONFIG:Debug>:${ALL_DLLS_DEBUG}>$<$<CONFIG:Release>:${ALL_DLLS_RELEASE}>)
     set(STATIC_RESOURCES
-        "static/logo.png"
-        "static/actinidia.visualelementsmanifest.xml"
+        "${PROJECT_SOURCE_DIR}/actinidia/static/logo.png"
+        "${PROJECT_SOURCE_DIR}/actinidia/static/actinidia.visualelementsmanifest.xml"
     )
     # Copy DLLs and static resources
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND_EXPAND_LISTS
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ALL_DLLS} ${PROJECT_BINARY_DIR}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STATIC_RESOURCES} ${PROJECT_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ALL_DLLS}" "${PROJECT_BINARY_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${STATIC_RESOURCES}" "${PROJECT_BINARY_DIR}"
         COMMENT "Copying DLLs and static resources" VERBATIM
     )
 endif()

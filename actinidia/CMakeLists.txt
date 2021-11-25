@@ -12,6 +12,7 @@ if (UNIX)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 
     include_directories(
+        ${PROJECT_SOURCE_DIR}/external/bass
         ${ZLIB_INCLUDE_DIRS}
         ${PNG_INCLUDE_DIRS}
         ${JPEG_INCLUDE_DIRS}
@@ -116,7 +117,7 @@ if (UNIX)
     install(FILES "${PROJECT_SOURCE_DIR}/external/bass/lib${BASS}.so" TYPE LIB)
 
     # Set runpath
-    # set_property(TARGET ${TARGET} PROPERTY INSTALL_RPATH ${CMAKE_INSTALL_LIBDIR})
+    set_property(TARGET ${TARGET} PROPERTY INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 
     # Copy resource pack if provided
     install(FILES "static/game.res"
@@ -134,7 +135,7 @@ if (UNIX)
 
     # Create desktop icon
     install(FILES
-        "static/actinidia.desktop"
+        "${PROJECT_BINARY_DIR}/actinidia/static/actinidia.desktop"
         DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     )

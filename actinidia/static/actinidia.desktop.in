@@ -1,12 +1,12 @@
 [Desktop Entry]
-Version=@ACTINIDIA_VERSION_MAJOR@.@ACTINIDIA_VERSION_MINOR@.@ACTINIDIA_VERSION_PATCH@
+Version=@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@
 Type=Application
-Name=Actinidia
-GenericName=Actinidia Game Engine
-Comment=Actinidia Game Engine
-Exec=/usr/local/bin/actinidia %f @ACTINIDIA_INSTALL_PATH@/game.res
+Name=@PROJECT_NAME@
+GenericName=@PROJECT_NAME@
+Comment=@PROJECT_DESCRIPTION@
+Exec=@CMAKE_INSTALL_PREFIX@/bin/actinidia %f @CMAKE_INSTALL_PREFIX@/share/actinidia/game.res
 Terminal=false
-Icon=@ACTINIDIA_INSTALL_PATH@/logo.png
+Icon=@CMAKE_INSTALL_PREFIX@/share/actinidia/logo.png
 MimeType=application/x-desktop
 Categories=ActionGame;Game;
 StartupNotify=true

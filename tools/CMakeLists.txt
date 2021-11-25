@@ -8,17 +8,21 @@ if (UNIX)
     find_package(ZLIB REQUIRED)
     find_package(PNG REQUIRED)
     find_package(JPEG REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 
     include_directories(
         ${ZLIB_INCLUDE_DIRS}
         ${PNG_INCLUDE_DIRS}
         ${JPEG_INCLUDE_DIRS}
+        ${GTK3_INCLUDE_DIRS}
     )
 
     set(EXTRA_LIBS
         ${PNG_LIBRARIES}
         ${JPEG_LIBRARIES}
         ${ZLIB_LIBRARIES}
+        ${GTK3_LIBRARIES}
         stdc++fs
     )
     list(APPEND SOURCES "tools_cmd.cpp")

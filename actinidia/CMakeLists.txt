@@ -62,23 +62,21 @@ elseif (WIN32)
         ${PROJECT_SOURCE_DIR}/external/libpng
         ${PROJECT_SOURCE_DIR}/external/zlib
     )
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(EXTRA_LIBS
-            bass.lib
-            liblua
-            jpegd.lib
-            libpng16d.lib
-            zlibd.lib
-        )
-    else()
-        set(EXTRA_LIBS
-            bass.lib
-            liblua
-            jpeg.lib
-            libpng16.lib
-            zlib.lib
-        )
-    endif()
+    set(EXTRA_LIBS_DEBUG
+        bass.lib
+        liblua
+        jpegd.lib
+        libpng16d.lib
+        zlibd.lib
+    )
+    set(EXTRA_LIBS_RELEASE
+        bass.lib
+        liblua
+        jpeg.lib
+        libpng16.lib
+        zlib.lib
+    )
+    set(EXTRA_LIBS $<$<CONFIG:Debug>:${EXTRA_LIBS_DEBUG}>$<$<CONFIG:Release>:${EXTRA_LIBS_RELEASE}>)
 endif()
 
 # Add sources
@@ -108,7 +106,7 @@ set(TARGET actinidia)
 add_executable(${TARGET} WIN32 ${SOURCES})
 
 # Link libraries
-target_link_libraries(${TARGET} ${EXTRA_LIBS})
+target_link_libraries(${TARGET} "${EXTRA_LIBS}")
 
 if (UNIX)
     # Install the program
@@ -163,8 +161,8 @@ elseif (WIN32)
     # Copy DLLs and static resources
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND_EXPAND_LISTS
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ALL_DLLS}" "${PROJECT_BINARY_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${STATIC_RESOURCES}" "${PROJECT_BINARY_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ALL_DLLS}" "${PROJECT_BINARY_DIR}/actinidia/"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${STATIC_RESOURCES}" "${PROJECT_BINARY_DIR}/actinidia/"
         COMMENT "Copying DLLs and static resources" VERBATIM
     )
 endif()

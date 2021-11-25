@@ -35,19 +35,17 @@ elseif (WIN32)
         ${PROJECT_SOURCE_DIR}/external/zlib
         ${lua_BINARY_DIR}
     )
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(EXTRA_LIBS
-            jpegd.lib
-            libpng16d.lib
-            zlibd.lib
-        )
-    else()
-        set(EXTRA_LIBS
-            jpeg.lib
-            libpng16.lib
-            zlib.lib
-        )
-    endif()
+    set(EXTRA_LIBS_DEBUG
+        jpegd.lib
+        libpng16d.lib
+        zlibd.lib
+    )
+    set(EXTRA_LIBS_RELEASE
+        jpeg.lib
+        libpng16.lib
+        zlib.lib
+    )
+    set(EXTRA_LIBS $<$<CONFIG:Debug>:${EXTRA_LIBS_DEBUG}>$<$<CONFIG:Release>:${EXTRA_LIBS_RELEASE}>)
     list(APPEND SOURCES
         "tools.cpp"
         "snake/snake.cpp"
@@ -67,7 +65,7 @@ set(TARGET actools)
 add_executable(${TARGET} WIN32 ${SOURCES})
 
 # Link libraries
-target_link_libraries(${TARGET} ${EXTRA_LIBS})
+target_link_libraries(${TARGET} "${EXTRA_LIBS}")
 
 if (UNIX)
     # Install the program
@@ -88,7 +86,7 @@ elseif (WIN32)
     # Copy DLLs
     add_custom_command(TARGET ${TARGET} POST_BUILD
         COMMAND_EXPAND_LISTS
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ALL_DLLS}" "${PROJECT_BINARY_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ALL_DLLS}" "${PROJECT_BINARY_DIR}/tools/"
         COMMENT "Copying DLLs" VERBATIM
     )
 endif()

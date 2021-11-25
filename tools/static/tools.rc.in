@@ -168,7 +168,7 @@ END
 // remains consistent on all systems.
 IDI_MAIN                ICON                    "static\\small.ico"
 
-IDI_ICON1               ICON                    "snake\\snake.ico"
+IDI_ICON1               ICON                    "snake\\static\\snake.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
